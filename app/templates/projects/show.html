@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}プロジェクト詳細 - {{ project.project_name }}{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">プロジェクト詳細</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.index') }}">プロジェクト一覧</a></li>
+                        <li class="breadcrumb-item active">{{ project.project_name }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ project.project_name }}</h3>
+                            <div class="card-tools">
+                                <a href="{{ url_for('projects.edit', project_id=project.id) }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> 編集
+                                </a>
+                                <button type="button" class="btn btn-danger btn-sm" 
+                                        onclick="confirmDelete({{ project.id }}, '{{ project.project_name }}')">
+                                    <i class="fas fa-trash"></i> 削除
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-5">プロジェクトコード:</dt>
+                                        <dd class="col-sm-7">{{ project.project_code }}</dd>
+                                        
+                                        <dt class="col-sm-5">プロジェクト名:</dt>
+                                        <dd class="col-sm-7">{{ project.project_name }}</dd>
+                                        
+                                        <dt class="col-sm-5">支社:</dt>
+                                        <dd class="col-sm-7">
+                                            {% if project.branch %}
+                                                <span class="badge badge-info">{{ project.branch.branch_name }}</span>
+                                                <small class="text-muted ml-2">({{ project.branch.branch_code }})</small>
+                                            {% else %}
+                                                <span class="text-muted">未設定</span>
+                                            {% endif %}
+                                        </dd>
+                                        
+                                        <dt class="col-sm-5">売上の年度:</dt>
+                                        <dd class="col-sm-7">{{ project.fiscal_year }}</dd>
+                                        
+                                        <dt class="col-sm-5">受注角度:</dt>
+                                        <dd class="col-sm-7">
+                                            <span class="badge badge-{% if project.order_probability == 100 %}success{% elif project.order_probability == 50 %}warning{% else %}danger{% endif %}">
+                                                {{ project.order_probability_symbol }} {{ project.order_probability }}%
+                                            </span>
+                                            <small class="text-muted ml-2">{{ project.order_probability_description }}</small>
+                                        </dd>
+                                    </dl>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-5">売上（契約金）:</dt>
+                                        <dd class="col-sm-7 text-right">{{ "{:,.2f}".format(project.revenue) }} 円</dd>
+                                        
+                                        <dt class="col-sm-5">経費（トータル）:</dt>
+                                        <dd class="col-sm-7 text-right">{{ "{:,.2f}".format(project.expenses) }} 円</dd>
+                                        
+                                        <dt class="col-sm-5">粗利:</dt>
+                                        <dd class="col-sm-7 text-right {% if project.gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            <strong>{{ "{:,.2f}".format(project.gross_profit) }} 円</strong>
+                                        </dd>
+                                        
+                                        <dt class="col-sm-5">粗利率:</dt>
+                                        <dd class="col-sm-7 text-right {% if project.gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            <strong>{{ "{:.1f}".format(project.gross_profit_rate) }}%</strong>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-5">作成日:</dt>
+                                        <dd class="col-sm-7">{{ project.created_at.strftime('%Y年%m月%d日 %H:%M') if project.created_at else '' }}</dd>
+                                    </dl>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-5">更新日:</dt>
+                                        <dd class="col-sm-7">{{ project.updated_at.strftime('%Y年%m月%d日 %H:%M') if project.updated_at else '' }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <a href="{{ url_for('projects.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> 一覧に戻る
+                            </a>
+                            <a href="{{ url_for('projects.edit', project_id=project.id) }}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> 編集
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">プロジェクト削除確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>以下のプロジェクトを削除してもよろしいですか？</p>
+                <p><strong id="deleteProjectName"></strong></p>
+                <p class="text-danger">この操作は取り消せません。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">削除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(projectId, projectName) {
+    $('#deleteProjectName').text(projectName);
+    $('#deleteForm').attr('action', '/projects/' + projectId + '/delete');
+    $('#deleteModal').modal('show');
+}
+</script>
+{% endblock %}

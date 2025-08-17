@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}プロジェクト一覧{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables -->
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<!-- Fallback to CDN if local files fail -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+<style>
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    /* 数値列の右寄せ */
+    .dt-right {
+        text-align: right;
+    }
+
+    /* 検索ボックスのスタイル調整 */
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+
+    .dataTables_filter input {
+        margin-left: 0.5rem;
+    }
+
+    /* ページネーションのスタイル調整 */
+    .dataTables_paginate {
+        margin-top: 1rem;
+    }
+
+    /* 情報表示のスタイル調整 */
+    .dataTables_info {
+        margin-top: 1rem;
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">プロジェクト一覧</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                    <li class="breadcrumb-item active">プロジェクト一覧</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">プロジェクト一覧</h3>
+                        <div class="card-tools">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success btn-sm" id="export-csv-btn">
+                                    <i class="fas fa-file-csv"></i> CSV出力
+                                </button>
+                                <button type="button" class="btn btn-info btn-sm" id="export-excel-btn">
+                                    <i class="fas fa-file-excel"></i> Excel出力
+                                </button>
+                                <a href="{{ url_for('projects.new') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> 新規作成
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- 絞り込みフィルター -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="fiscal_year_filter">年度で絞り込み</label>
+                                <select class="form-control" id="fiscal_year_filter">
+                                    <option value="">すべての年度</option>
+                                    {% for year in fiscal_years %}
+                                    <option value="{{ year.year }}">{{ year.year_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="branch_filter">支社で絞り込み</label>
+                                <select class="form-control" id="branch_filter">
+                                    <option value="">すべての支社</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.branch_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-secondary btn-sm" id="clear_filter">
+                                    <i class="fas fa-eraser mr-1"></i>フィルタークリア
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover" id="projects-table">
+                                <thead>
+                                    <tr>
+                                        <th>プロジェクトコード</th>
+                                        <th>プロジェクト名</th>
+                                        <th>支社</th>
+                                        <th>年度</th>
+                                        <th>受注角度</th>
+                                        <th class="dt-right">売上（円）</th>
+                                        <th class="dt-right">経費（円）</th>
+                                        <th class="dt-right">粗利（円）</th>
+                                        <th>作成日</th>
+                                        <th class="no-sort">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- DataTablesがサーバーサイドでデータを読み込みます -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>{% endblock %}
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>プロジェクト削除確認
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>警告:</strong> この操作は取り消すことができません。
+                </div>
+                <p class="mb-2">以下のプロジェクトを削除してもよろしいですか？</p>
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-danger">削除対象プロジェクト</h6>
+                        <p class="card-text"><strong id="deleteProjectName"></strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>キャンセル
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash mr-1"></i>削除実行
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<!-- DataTablesスクリプトはbase.htmlで既に読み込まれているため削除 -->
+
+<script>
+    $(document).ready(function () {
+
+        // DataTablesの初期化（サーバーサイド処理）
+        var table = $('#projects-table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{{ url_for('projects.api_list') }}",
+                "type": "GET",
+                "data": function(d) {
+                    // フィルター条件を追加
+                    d.fiscal_year_filter = $('#fiscal_year_filter').val();
+                    d.branch_filter = $('#branch_filter').val();
+                },
+                "error": function (xhr, error, code) {
+                    console.error('DataTables AJAX error:', error, code);
+                    console.error('Response:', xhr.responseText);
+                }
+            },
+            "responsive": true,
+            "lengthChange": true,
+            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "全て"]],
+            "autoWidth": false,
+            "pageLength": 25,
+            "order": [[8, "desc"]], // 作成日で降順ソート
+            "language": {
+                "processing": "処理中...",
+                "search": "検索:",
+                "lengthMenu": "_MENU_ 件表示",
+                "info": "_START_ から _END_ まで（全 _TOTAL_ 件）",
+                "infoEmpty": "0 から 0 まで（全 0 件）",
+                "infoFiltered": "（全 _MAX_ 件から絞り込み）",
+                "infoPostFix": "",
+                "loadingRecords": "読み込み中...",
+                "zeroRecords": "該当するレコードがありません",
+                "emptyTable": "テーブルにデータがありません",
+                "paginate": {
+                    "first": "最初",
+                    "previous": "前",
+                    "next": "次",
+                    "last": "最後"
+                },
+                "aria": {
+                    "sortAscending": ": 昇順でソート",
+                    "sortDescending": ": 降順でソート"
+                }
+            },
+            "columnDefs": [
+                {
+                    "targets": [5, 6, 7], // 売上、経費、粗利の列
+                    "className": "dt-right",
+                    "type": "num"
+                },
+                {
+                    "targets": [9], // 操作列
+                    "orderable": false,
+                    "searchable": false,
+                    "className": "text-center"
+                },
+                {
+                    "targets": [4], // 受注角度列
+                    "className": "text-center"
+                }
+            ],
+            "drawCallback": function (settings) {
+                // テーブル描画後の処理
+                // ツールチップの初期化
+                $('[title]').tooltip();
+            }
+        });
+
+        // 検索機能の強化
+        $('#projects-table_filter input').attr('placeholder', 'プロジェクトコード、名前、支社、年度で検索...');
+
+        // テーブルの再描画時にモーダルイベントを再バインド
+        table.on('draw', function () {
+            // ツールチップの再初期化
+            $('[title]').tooltip();
+        });
+
+        // フィルターの変更イベント
+        $('#fiscal_year_filter, #branch_filter').on('change', function() {
+            table.ajax.reload();
+        });
+
+        // フィルタークリアボタン
+        $('#clear_filter').on('click', function() {
+            $('#fiscal_year_filter').val('');
+            $('#branch_filter').val('');
+            table.ajax.reload();
+        });
+
+        // CSVエクスポートボタン
+        $('#export-csv-btn').on('click', function() {
+            exportToCSV();
+        });
+
+        // Excelエクスポートボタン
+        $('#export-excel-btn').on('click', function() {
+            exportToExcel();
+        });
+    });
+
+    // 削除確認ダイアログ
+    function confirmDelete(projectId, projectName) {
+        // HTMLエンティティをデコード
+        var decodedName = $('<div>').html(projectName).text();
+        $('#deleteProjectName').text(decodedName);
+        $('#deleteForm').attr('action', '/projects/' + projectId + '/delete');
+        $('#deleteModal').modal('show');
+    }
+
+    // 削除フォーム送信時の処理
+    $(document).on('submit', '#deleteForm', function(e) {
+        // 削除ボタンを無効化して二重送信を防ぐ
+        var deleteButton = $(this).find('button[type="submit"]');
+        deleteButton.prop('disabled', true);
+        deleteButton.html('<i class="fas fa-spinner fa-spin"></i> 削除中...');
+        
+        // フォーム送信を続行
+        return true;
+    });
+
+    // ページ読み込み完了後の処理
+    $(window).on('load', function () {
+        // ローディング表示の改善
+        $('.dataTables_processing').css({
+            'background': 'rgba(255, 255, 255, 0.8)',
+            'border': '1px solid #ddd',
+            'border-radius': '4px',
+            'padding': '10px'
+        });
+    });
+
+    // CSVエクスポート機能
+    function exportToCSV() {
+        exportData('csv', '#export-csv-btn', 'CSV');
+    }
+
+    // Excelエクスポート機能
+    function exportToExcel() {
+        exportData('excel', '#export-excel-btn', 'Excel');
+    }
+
+    // 共通エクスポート機能
+    function exportData(format, buttonSelector, formatName) {
+        // 現在の検索条件を取得
+        var searchParams = new URLSearchParams();
+        
+        // DataTablesの検索値を取得
+        var searchValue = $('#projects-table_filter input').val();
+        if (searchValue) {
+            searchParams.append('search', searchValue);
+        }
+        
+        // フィルター条件を取得
+        var fiscalYearFilter = $('#fiscal_year_filter').val();
+        if (fiscalYearFilter) {
+            searchParams.append('fiscal_year', fiscalYearFilter);
+        }
+        
+        var branchFilter = $('#branch_filter').val();
+        if (branchFilter) {
+            searchParams.append('branch_id', branchFilter);
+        }
+        
+        // エクスポートボタンを無効化
+        var exportBtn = $(buttonSelector);
+        var originalText = exportBtn.html();
+        exportBtn.prop('disabled', true);
+        exportBtn.html('<i class="fas fa-spinner fa-spin"></i> 処理中...');
+        
+        // プレビューAPIを呼び出して件数を確認
+        $.get('/export/preview?' + searchParams.toString())
+            .done(function(response) {
+                if (response.success) {
+                    // 確認ダイアログを表示
+                    var message = `${response.total_count}件のプロジェクトデータを${formatName}形式でエクスポートします。\n\n実行しますか？`;
+                    
+                    if (confirm(message)) {
+                        // ダウンロードを実行
+                        var downloadUrl = `/export/${format}?` + searchParams.toString();
+                        
+                        // 隠しリンクを作成してダウンロードを実行
+                        var link = document.createElement('a');
+                        link.href = downloadUrl;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 成功メッセージを表示
+                        showAlert('success', `${response.total_count}件のデータを${formatName}形式でエクスポートしました。`);
+                    }
+                } else {
+                    showAlert('error', response.error || 'エクスポート処理中にエラーが発生しました。');
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Export preview error:', error);
+                showAlert('error', 'エクスポート処理中にエラーが発生しました。');
+            })
+            .always(function() {
+                // ボタンを元に戻す
+                exportBtn.prop('disabled', false);
+                exportBtn.html(originalText);
+            });
+    }
+    
+    // アラート表示関数
+    function showAlert(type, message) {
+        var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        var iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        
+        var alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="fas ${iconClass} mr-2"></i>
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        
+        // アラートを表示
+        $('.content-header').after(alertHtml);
+        
+        // 5秒後に自動で消す
+        setTimeout(function() {
+            $('.alert').fadeOut();
+        }, 5000);
+    }
+</script>
+{% endblock %}

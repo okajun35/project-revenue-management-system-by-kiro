@@ -1,0 +1,107 @@
+# プロジェクト収支システム - 本番環境用 Docker Compose
+version: '3.8'
+
+services:
+  # Flask アプリケーション
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: project-revenue-web-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - app-data:/app/data
+      - app-uploads:/app/uploads
+      - app-logs:/app/logs
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Nginx リバースプロキシ
+  nginx:
+    image: nginx:alpine
+    container_name: project-revenue-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./static:/var/www/static:ro
+      - nginx-ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    networks:
+      - app-network
+    depends_on:
+      - web
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ログ収集 (オプション)
+  logrotate:
+    image: alpine:latest
+    container_name: project-revenue-logrotate
+    restart: unless-stopped
+    volumes:
+      - app-logs:/app/logs
+      - nginx-logs:/var/log/nginx
+      - ./scripts/logrotate.sh:/usr/local/bin/logrotate.sh:ro
+    command: sh -c "while true; do /usr/local/bin/logrotate.sh; sleep 86400; done"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  app-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  app-uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./uploads
+  app-logs:
+    driver: local
+  nginx-ssl:
+    driver: local
+  nginx-logs:
+    driver: local

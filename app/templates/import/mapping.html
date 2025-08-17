@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}列マッピング設定{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">列マッピング設定</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('import.index') }}">インポート</a></li>
+                        {% if file_type == 'excel' and selected_sheet %}
+                        <li class="breadcrumb-item"><a href="{{ url_for('import.select_sheet') }}">シート選択</a></li>
+                        {% endif %}
+                        <li class="breadcrumb-item active">列マッピング設定</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-10 offset-md-1">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-columns"></i>
+                                列マッピング設定
+                            </h3>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('import.set_mapping') }}">
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <h5><i class="icon fas fa-info"></i> 列マッピングについて</h5>
+                                    <p class="mb-0">
+                                        アップロードされたファイルの列をシステムの項目に対応付けてください。
+                                        必須項目は必ず設定する必要があります。
+                                    </p>
+                                </div>
+
+                                <!-- マッピング設定の保存・読み込み -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="card card-outline card-secondary">
+                                            <div class="card-header">
+                                                <h6 class="card-title"><i class="fas fa-save"></i> マッピング設定を保存</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="input-group">
+                                                    <input type="text" id="mapping-name" class="form-control" placeholder="設定名を入力" value="デフォルト">
+                                                    <div class="input-group-append">
+                                                        <button type="button" id="save-mapping" class="btn btn-success">
+                                                            <i class="fas fa-save"></i> 保存
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card card-outline card-secondary">
+                                            <div class="card-header">
+                                                <h6 class="card-title"><i class="fas fa-folder-open"></i> 保存済み設定を読み込み</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="input-group">
+                                                    <select id="saved-mappings" class="form-control">
+                                                        <option value="">-- 保存済み設定を選択 --</option>
+                                                    </select>
+                                                    <div class="input-group-append">
+                                                        <button type="button" id="load-mapping" class="btn btn-info">
+                                                            <i class="fas fa-folder-open"></i> 読み込み
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ファイル情報 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-info"><i class="fas fa-file"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">ファイル名</span>
+                                                <span class="info-box-number">{{ filename }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if file_type == 'excel' and selected_sheet %}
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-warning"><i class="fas fa-file-excel"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">選択シート</span>
+                                                <span class="info-box-number">{{ selected_sheet }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-md-{% if file_type == 'excel' and selected_sheet %}4{% else %}8{% endif %}">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-success"><i class="fas fa-table"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">データ行数</span>
+                                                <span class="info-box-number">{{ row_count }}行</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 列マッピング設定 -->
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th width="20%">システム項目</th>
+                                                <th width="10%">必須</th>
+                                                <th width="25%">ファイルの列</th>
+                                                <th width="20%">サンプルデータ</th>
+                                                <th width="25%">説明・例</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for field_name, field_info in system_fields.items() %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ field_info.label }}</strong>
+                                                    {% if field_info.required %}
+                                                    <span class="badge badge-danger ml-1">必須</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if field_info.required %}
+                                                    <i class="fas fa-check text-danger"></i>
+                                                    {% else %}
+                                                    <i class="fas fa-minus text-muted"></i>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <select name="mapping_{{ field_name }}" class="form-control column-select" 
+                                                            data-field="{{ field_name }}" 
+                                                            {% if field_info.required %}required{% endif %}>
+                                                        <option value="">-- 列を選択してください --</option>
+                                                        {% for column in columns %}
+                                                        <option value="{{ column }}" 
+                                                                {% if auto_mapping.get(field_name) == column %}selected{% endif %}>
+                                                            {{ column }}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <span class="sample-data" data-field="{{ field_name }}">
+                                                        {% if auto_mapping.get(field_name) and sample_data %}
+                                                            {{ sample_data[0].get(auto_mapping.get(field_name), '') }}
+                                                        {% endif %}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        {{ field_info.description }}<br>
+                                                        <strong>例:</strong> {{ field_info.example }}
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 支社マッピング情報 -->
+                                {% if branch_suggestions.existing_branches %}
+                                <div class="mt-4">
+                                    <h5><i class="fas fa-building"></i> 支社マッピング情報</h5>
+                                    <div class="alert alert-info">
+                                        <h6><i class="fas fa-info-circle"></i> 既存の支社</h6>
+                                        <p class="mb-2">システムに登録済みの支社は以下の通りです。ファイル内の支社名がこれらと一致する場合は自動的に関連付けられます。</p>
+                                        <div class="row">
+                                            {% for branch in branch_suggestions.existing_branches %}
+                                            <div class="col-md-4 mb-2">
+                                                <span class="badge badge-secondary">{{ branch.branch_code }}</span>
+                                                {{ branch.branch_name }}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <hr>
+                                        <small class="text-muted">
+                                            <i class="fas fa-lightbulb"></i>
+                                            ファイル内に新しい支社名がある場合は、インポート時に自動的に支社が作成されます。
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- サンプルデータプレビュー -->
+                                <div class="mt-4">
+                                    <h5>ファイルのサンプルデータ（最初の3行）</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    {% for column in columns %}
+                                                    <th>{{ column }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for row in sample_data[:3] %}
+                                                <tr>
+                                                    {% for column in columns %}
+                                                    <td>{{ row.get(column, '') }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right"></i>
+                                    プレビューに進む
+                                </button>
+                                <button type="button" id="improve-mapping" class="btn btn-info">
+                                    <i class="fas fa-magic"></i>
+                                    自動マッピング改善
+                                </button>
+                                <a href="{{ url_for('import.cancel') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i>
+                                    キャンセル
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+$(document).ready(function() {
+    var sampleData = {{ sample_data | tojson }};
+    var validationTimeout;
+    
+    // 列選択時にサンプルデータを更新
+    $('.column-select').on('change', function() {
+        var fieldName = $(this).data('field');
+        var selectedColumn = $(this).val();
+        var sampleDataSpan = $('.sample-data[data-field="' + fieldName + '"]');
+        
+        if (selectedColumn) {
+            // サンプルデータを取得して表示
+            var sampleDataValue = getSampleDataForColumn(selectedColumn);
+            sampleDataSpan.html('<code>' + sampleDataValue + '</code>');
+        } else {
+            sampleDataSpan.text('');
+        }
+        
+        // リアルタイム検証（デバウンス）
+        clearTimeout(validationTimeout);
+        validationTimeout = setTimeout(function() {
+            validateMapping();
+        }, 500);
+    });
+    
+    // サンプルデータを取得する関数
+    function getSampleDataForColumn(columnName) {
+        if (sampleData && sampleData.length > 0) {
+            return sampleData[0][columnName] || '';
+        }
+        return '';
+    }
+    
+    // マッピング検証関数
+    function validateMapping() {
+        var mappingData = {};
+        var hasRequiredFields = true;
+        var hasDuplicates = false;
+        var selectedValues = [];
+        
+        // フォームデータを収集
+        $('.column-select').each(function() {
+            var fieldName = $(this).data('field');
+            var selectedColumn = $(this).val();
+            
+            if (selectedColumn) {
+                mappingData['mapping_' + fieldName] = selectedColumn;
+                
+                // 重複チェック
+                if (selectedValues.includes(selectedColumn)) {
+                    hasDuplicates = true;
+                    $(this).addClass('is-invalid');
+                } else {
+                    $(this).removeClass('is-invalid');
+                    selectedValues.push(selectedColumn);
+                }
+            }
+        });
+        
+        // 必須フィールドチェック
+        var requiredFields = ['project_code', 'project_name', 'branch_name', 'fiscal_year', 'order_probability', 'revenue', 'expenses'];
+        requiredFields.forEach(function(field) {
+            var select = $('select[name="mapping_' + field + '"]');
+            if (!select.val()) {
+                hasRequiredFields = false;
+                select.addClass('is-invalid');
+            } else {
+                select.removeClass('is-invalid');
+            }
+        });
+        
+        // エラー表示の更新
+        updateValidationDisplay(hasRequiredFields, hasDuplicates);
+        
+        // 送信ボタンの有効/無効を切り替え
+        var isValid = hasRequiredFields && !hasDuplicates;
+        $('button[type="submit"]').prop('disabled', !isValid);
+        
+        return isValid;
+    }
+    
+    // 検証結果の表示を更新
+    function updateValidationDisplay(hasRequiredFields, hasDuplicates) {
+        // 既存の警告を削除
+        $('.validation-warning').remove();
+        
+        var warnings = [];
+        
+        if (!hasRequiredFields) {
+            warnings.push('<i class="fas fa-exclamation-triangle"></i> 必須項目のマッピングが不足しています。');
+        }
+        
+        if (hasDuplicates) {
+            warnings.push('<i class="fas fa-exclamation-triangle"></i> 同じ列を複数の項目に割り当てることはできません。');
+        }
+        
+        if (warnings.length > 0) {
+            var warningHtml = '<div class="alert alert-warning validation-warning">' + warnings.join('<br>') + '</div>';
+            $('.card-body').prepend(warningHtml);
+        }
+    }
+    
+    // 自動マッピング改善ボタン
+    $('#improve-mapping').on('click', function() {
+        // 未マッピングの必須フィールドに対して推測マッピングを実行
+        var requiredFields = ['project_code', 'project_name', 'branch_name', 'fiscal_year', 'order_probability', 'revenue', 'expenses'];
+        
+        requiredFields.forEach(function(field) {
+            var select = $('select[name="mapping_' + field + '"]');
+            if (!select.val()) {
+                // 類似する列名を検索
+                var bestMatch = findBestColumnMatch(field);
+                if (bestMatch) {
+                    select.val(bestMatch).trigger('change');
+                }
+            }
+        });
+    });
+    
+    // 列名の類似度マッチング
+    function findBestColumnMatch(fieldName) {
+        var columns = {{ columns | tojson }};
+        var keywords = {
+            'project_code': ['プロジェクト', 'コード', 'project', 'code', 'id'],
+            'project_name': ['プロジェクト', '名', 'project', 'name', 'title'],
+            'branch_name': ['支社', '営業所', 'branch', 'office', '名'],
+            'fiscal_year': ['年度', '年', 'year', 'fiscal'],
+            'order_probability': ['受注', '角度', '確率', 'probability', 'order'],
+            'revenue': ['売上', '契約', '金額', 'revenue', 'sales', 'amount'],
+            'expenses': ['経費', '費用', 'expense', 'cost']
+        };
+        
+        var fieldKeywords = keywords[fieldName] || [];
+        var bestMatch = null;
+        var bestScore = 0;
+        
+        columns.forEach(function(column) {
+            var score = 0;
+            var columnLower = column.toLowerCase();
+            
+            fieldKeywords.forEach(function(keyword) {
+                if (columnLower.includes(keyword.toLowerCase())) {
+                    score += keyword.length;
+                }
+            });
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = column;
+            }
+        });
+        
+        return bestMatch;
+    }
+    
+    // フォーム送信前の最終検証
+    $('form').on('submit', function(e) {
+        if (!validateMapping()) {
+            e.preventDefault();
+            alert('マッピング設定に問題があります。エラーを修正してください。');
+            return false;
+        }
+    });
+    
+    // マッピング設定保存
+    $('#save-mapping').on('click', function() {
+        var mappingName = $('#mapping-name').val().trim();
+        if (!mappingName) {
+            alert('設定名を入力してください。');
+            return;
+        }
+        
+        var mappingData = { mapping_name: mappingName };
+        $('.column-select').each(function() {
+            var fieldName = $(this).data('field');
+            var selectedColumn = $(this).val();
+            if (selectedColumn) {
+                mappingData['mapping_' + fieldName] = selectedColumn;
+            }
+        });
+        
+        $.ajax({
+            url: '{{ url_for("import.save_mapping") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(mappingData),
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    loadSavedMappings();
+                } else {
+                    alert('保存に失敗しました: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('保存中にエラーが発生しました。');
+            }
+        });
+    });
+    
+    // マッピング設定読み込み
+    $('#load-mapping').on('click', function() {
+        var mappingName = $('#saved-mappings').val();
+        if (!mappingName) {
+            alert('読み込む設定を選択してください。');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ url_for("import.load_mapping") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ mapping_name: mappingName }),
+            success: function(response) {
+                if (response.success) {
+                    // マッピング設定を適用
+                    $('.column-select').val('');
+                    for (var field in response.mapping) {
+                        $('select[name="mapping_' + field + '"]').val(response.mapping[field]).trigger('change');
+                    }
+                    alert('マッピング設定を読み込みました。');
+                } else {
+                    alert('読み込みに失敗しました: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('読み込み中にエラーが発生しました。');
+            }
+        });
+    });
+    
+    // 保存済みマッピング一覧を読み込み
+    function loadSavedMappings() {
+        $.ajax({
+            url: '{{ url_for("import.get_saved_mappings") }}',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var select = $('#saved-mappings');
+                    select.empty().append('<option value="">-- 保存済み設定を選択 --</option>');
+                    response.mappings.forEach(function(mapping) {
+                        select.append('<option value="' + mapping + '">' + mapping + '</option>');
+                    });
+                }
+            }
+        });
+    }
+    
+    // 初期化
+    loadSavedMappings();
+    validateMapping();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Excelシート選択{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Excelシート選択</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('import.index') }}">インポート</a></li>
+                        <li class="breadcrumb-item active">シート選択</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-10 offset-md-1">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-file-excel"></i>
+                                Excelシート選択
+                            </h3>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('import.set_sheet') }}">
+                            <div class="card-body">
+                                <!-- ファイル情報 -->
+                                <div class="alert alert-info">
+                                    <h5><i class="icon fas fa-info"></i> ファイル情報</h5>
+                                    <p class="mb-1"><strong>ファイル名:</strong> {{ filename }}</p>
+                                    <p class="mb-0"><strong>シート数:</strong> {{ excel_info.sheet_count }}個</p>
+                                </div>
+
+                                <!-- シート選択 -->
+                                <div class="form-group">
+                                    <label for="sheet_name" class="form-label">インポートするシートを選択してください</label>
+                                    
+                                    {% for sheet in excel_info.sheets %}
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" 
+                                                       class="custom-control-input" 
+                                                       id="sheet_{{ loop.index }}" 
+                                                       name="sheet_name" 
+                                                       value="{{ sheet.name }}"
+                                                       {% if loop.first %}checked{% endif %}
+                                                       {% if not sheet.has_data %}disabled{% endif %}>
+                                                <label class="custom-control-label" for="sheet_{{ loop.index }}">
+                                                    <strong>{{ sheet.name }}</strong>
+                                                    {% if not sheet.has_data %}
+                                                        <span class="badge badge-warning ml-2">データなし</span>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                            
+                                            {% if sheet.has_data %}
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-table"></i> 
+                                                    {{ sheet.row_count }}行 × {{ sheet.col_count }}列
+                                                </small>
+                                                
+                                                {% if sheet.headers %}
+                                                <div class="mt-2">
+                                                    <small class="text-muted"><strong>列ヘッダー:</strong></small>
+                                                    <div class="mt-1">
+                                                        {% for header in sheet.headers[:10] %}
+                                                            <span class="badge badge-light mr-1">{{ header }}</span>
+                                                        {% endfor %}
+                                                        {% if sheet.headers|length > 10 %}
+                                                            <span class="text-muted">... 他{{ sheet.headers|length - 10 }}列</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            <div class="mt-2">
+                                                <small class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    このシートにはデータが含まれていません
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- 注意事項 -->
+                                <div class="alert alert-warning">
+                                    <h6><i class="icon fas fa-exclamation-triangle"></i> 注意事項</h6>
+                                    <ul class="mb-0">
+                                        <li>データが含まれているシートのみ選択できます</li>
+                                        <li>選択したシートの1行目がヘッダー行として扱われます</li>
+                                        <li>空のセルや不正なデータがある場合は、次のステップで検証されます</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right"></i>
+                                    選択したシートで続行
+                                </button>
+                                <a href="{{ url_for('import.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i>
+                                    ファイル選択に戻る
+                                </a>
+                                <a href="{{ url_for('import.cancel') }}" class="btn btn-outline-danger">
+                                    <i class="fas fa-times"></i>
+                                    キャンセル
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+$(document).ready(function() {
+    // シート選択時の処理
+    $('input[name="sheet_name"]').on('change', function() {
+        var selectedSheet = $(this).val();
+        console.log('選択されたシート:', selectedSheet);
+    });
+    
+    // フォーム送信前の確認
+    $('form').on('submit', function(e) {
+        var selectedSheet = $('input[name="sheet_name"]:checked').val();
+        if (!selectedSheet) {
+            e.preventDefault();
+            alert('シートを選択してください');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

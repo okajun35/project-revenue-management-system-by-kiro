@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}年度管理{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables -->
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<!-- Fallback to CDN if local files fail -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+<style>
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">年度管理</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                    <li class="breadcrumb-item active">年度管理</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">年度一覧</h3>
+                        <div class="card-tools">
+                            <a href="{{ url_for('fiscal_years.new') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> 新規作成
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover" id="fiscal-years-table">
+                                <thead>
+                                    <tr>
+                                        <th>年度</th>
+                                        <th>年度名</th>
+                                        <th>状態</th>
+                                        <th>プロジェクト数</th>
+                                        <th>作成日</th>
+                                        <th class="no-sort">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- DataTablesがサーバーサイドでデータを読み込みます -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">年度削除確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>以下の年度を削除してもよろしいですか？</p>
+                <p><strong id="deleteYearName"></strong></p>
+                <div id="deleteWarning" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    この年度には <strong id="projectCount"></strong> 個のプロジェクトが関連付けられています。
+                </div>
+                <p class="text-danger">この操作は取り消せません。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" id="deleteButton">削除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 有効/無効切り替え確認モーダル -->
+<div class="modal fade" id="toggleModal" tabindex="-1" role="dialog" aria-labelledby="toggleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="toggleModalLabel">状態変更確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>以下の年度の状態を変更してもよろしいですか？</p>
+                <p><strong id="toggleYearName"></strong></p>
+                <p>変更後の状態: <span id="toggleNewStatus" class="badge"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <form id="toggleForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-primary">変更</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function () {
+        // DataTablesの初期化（サーバーサイド処理）
+        var table = $('#fiscal-years-table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{{ url_for('fiscal_years.api_list') }}",
+                "type": "GET",
+                "error": function (xhr, error, code) {
+                    console.error('DataTables AJAX error:', error, code);
+                    console.error('Response:', xhr.responseText);
+                }
+            },
+            "responsive": true,
+            "lengthChange": true,
+            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "全て"]],
+            "autoWidth": false,
+            "pageLength": 25,
+            "order": [[0, "desc"]], // 年度で降順ソート
+            "language": {
+                "processing": "処理中...",
+                "search": "検索:",
+                "lengthMenu": "_MENU_ 件表示",
+                "info": "_START_ から _END_ まで（全 _TOTAL_ 件）",
+                "infoEmpty": "0 から 0 まで（全 0 件）",
+                "infoFiltered": "（全 _MAX_ 件から絞り込み）",
+                "infoPostFix": "",
+                "loadingRecords": "読み込み中...",
+                "zeroRecords": "該当するレコードがありません",
+                "emptyTable": "テーブルにデータがありません",
+                "paginate": {
+                    "first": "最初",
+                    "previous": "前",
+                    "next": "次",
+                    "last": "最後"
+                },
+                "aria": {
+                    "sortAscending": ": 昇順でソート",
+                    "sortDescending": ": 降順でソート"
+                }
+            },
+            "columnDefs": [
+                {
+                    "targets": [3], // プロジェクト数列
+                    "className": "text-center"
+                },
+                {
+                    "targets": [5], // 操作列
+                    "orderable": false,
+                    "searchable": false,
+                    "className": "text-center"
+                },
+                {
+                    "targets": [2], // 状態列
+                    "className": "text-center"
+                }
+            ],
+            "drawCallback": function (settings) {
+                // ツールチップの初期化
+                $('[title]').tooltip();
+            }
+        });
+
+        // 検索機能の強化
+        $('#fiscal-years-table_filter input').attr('placeholder', '年度、年度名で検索...');
+
+        // テーブルの再描画時にモーダルイベントを再バインド
+        table.on('draw', function () {
+            // ツールチップの再初期化
+            $('[title]').tooltip();
+        });
+    });
+
+    // 削除確認ダイアログ
+    function confirmDelete(fiscalYearId, yearName, projectCount) {
+        $('#deleteYearName').text(yearName);
+        $('#deleteForm').attr('action', '/fiscal-years/' + fiscalYearId + '/delete');
+        
+        if (projectCount > 0) {
+            $('#projectCount').text(projectCount);
+            $('#deleteWarning').show();
+            $('#deleteButton').prop('disabled', true).text('削除不可');
+        } else {
+            $('#deleteWarning').hide();
+            $('#deleteButton').prop('disabled', false).text('削除');
+        }
+        
+        $('#deleteModal').modal('show');
+    }
+
+    // 有効/無効切り替え確認ダイアログ
+    function toggleActive(fiscalYearId, yearName, isActive) {
+        $('#toggleYearName').text(yearName);
+        $('#toggleForm').attr('action', '/fiscal-years/' + fiscalYearId + '/toggle');
+        
+        if (isActive) {
+            $('#toggleNewStatus').removeClass('badge-success').addClass('badge-secondary').text('無効');
+        } else {
+            $('#toggleNewStatus').removeClass('badge-secondary').addClass('badge-success').text('有効');
+        }
+        
+        $('#toggleModal').modal('show');
+    }
+
+    // ページ読み込み完了後の処理
+    $(window).on('load', function () {
+        // ローディング表示の改善
+        $('.dataTables_processing').css({
+            'background': 'rgba(255, 255, 255, 0.8)',
+            'border': '1px solid #ddd',
+            'border-radius': '4px',
+            'padding': '10px'
+        });
+    });
+</script>
+{% endblock %}

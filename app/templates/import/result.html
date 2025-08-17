@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}インポート結果{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">インポート結果</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('import.index') }}">CSVインポート</a></li>
+                        <li class="breadcrumb-item active">結果</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <!-- 結果サマリー -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3>{{ result.success_count }}</h3>
+                            <p>成功</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3>{{ result.error_count }}</h3>
+                            <p>エラー</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3>{{ result.total_rows if result.total_rows is defined else (result.success_count + result.error_count) }}</h3>
+                            <p>総処理数</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ "%.1f"|format(result.success_rate if result.success_rate is defined else ((result.success_count / (result.success_count + result.error_count) * 100) if (result.success_count + result.error_count) > 0 else 0)) }}%</h3>
+                            <p>成功率</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 詳細統計 -->
+            {% if result.validation_summary %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-bar"></i>
+                                インポート詳細統計
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="info-box">
+                                        <span class="info-box-icon bg-blue"><i class="fas fa-database"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">処理済みプロジェクト</span>
+                                            <span class="info-box-number">{{ result.success_count }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="info-box">
+                                        <span class="info-box-icon bg-yellow"><i class="fas fa-skip-forward"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">スキップ済み</span>
+                                            <span class="info-box-number">{{ result.skipped_count if result.skipped_count is defined else 0 }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="info-box">
+                                        <span class="info-box-icon bg-red"><i class="fas fa-copy"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">重複検出</span>
+                                            <span class="info-box-number">{{ result.duplicates|length if result.duplicates else 0 }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 成功したプロジェクト -->
+            {% if result.successful_projects and result.successful_projects|length > 0 %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-check-circle"></i>
+                                正常にインポートされたプロジェクト
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-sm btn-success" id="downloadSuccess">
+                                    <i class="fas fa-download"></i>
+                                    成功レポートをダウンロード
+                                </button>
+                                <a href="{{ url_for('import.download_success_report') }}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-file-csv"></i>
+                                    サーバーからダウンロード
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm" id="successTable">
+                                    <thead>
+                                        <tr>
+                                            <th>行番号</th>
+                                            <th>プロジェクトコード</th>
+                                            <th>プロジェクト名</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in result.successful_projects %}
+                                        <tr>
+                                            <td>{{ project.row }}</td>
+                                            <td>{{ project.project_code }}</td>
+                                            <td>{{ project.project_name }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- エラー詳細 -->
+            {% if result.error_count > 0 and errors %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-danger">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                エラー詳細
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-sm btn-danger" id="downloadErrors">
+                                    <i class="fas fa-download"></i>
+                                    エラーレポートをダウンロード
+                                </button>
+                                <a href="{{ url_for('import.download_error_report') }}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-file-csv"></i>
+                                    サーバーからダウンロード
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped table-sm" id="errorTable">
+                                    <thead>
+                                        <tr>
+                                            <th>行番号</th>
+                                            <th>エラータイプ</th>
+                                            <th>エラー内容</th>
+                                            <th>データ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for error in errors %}
+                                        <tr>
+                                            <td>{{ error.row }}</td>
+                                            <td>
+                                                <span class="badge badge-{{ 'warning' if error.type == 'validation_error' else 'danger' }}">
+                                                    {{ error.type if error.type else 'エラー' }}
+                                                </span>
+                                            </td>
+                                            <td>{{ error.error }}</td>
+                                            <td>
+                                                {% if error.data %}
+                                                <small class="text-muted">
+                                                    {% for key, value in error.data.items() %}
+                                                        {% if value and value != '' %}
+                                                            {{ key }}: {{ value }}{% if not loop.last %}, {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 重複データ詳細 -->
+            {% if result.duplicates and result.duplicates|length > 0 %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-copy"></i>
+                                重複データ詳細
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            {% for duplicate in result.duplicates %}
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> {{ duplicate.message }}</h6>
+                                <p class="mb-0">該当行: {{ duplicate.rows|join(', ') }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- アクション -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <a href="{{ url_for('project.index') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-list"></i>
+                                プロジェクト一覧を確認
+                            </a>
+                            <a href="{{ url_for('import.index') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-upload"></i>
+                                新しいファイルをインポート
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+$(document).ready(function() {
+    // DataTablesの初期化
+    $('#errorTable, #successTable').DataTable({
+        "responsive": true,
+        "autoWidth": false,
+        "pageLength": 25,
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Japanese.json"
+        }
+    });
+    
+    // エラーレポートダウンロード
+    $('#downloadErrors').on('click', function() {
+        var csv = 'Row,ErrorType,Error,Data\n';
+        
+        $('#errorTable tbody tr').each(function() {
+            var row = $(this).find('td:eq(0)').text();
+            var type = $(this).find('td:eq(1)').text().replace(/"/g, '""');
+            var error = $(this).find('td:eq(2)').text().replace(/"/g, '""');
+            var data = $(this).find('td:eq(3)').text().replace(/"/g, '""');
+            csv += row + ',"' + type + '","' + error + '","' + data + '"\n';
+        });
+        
+        downloadCSV(csv, 'import_errors_' + getCurrentTimestamp() + '.csv');
+    });
+    
+    // 成功レポートダウンロード
+    $('#downloadSuccess').on('click', function() {
+        var csv = 'Row,ProjectCode,ProjectName\n';
+        
+        $('#successTable tbody tr').each(function() {
+            var row = $(this).find('td:eq(0)').text();
+            var code = $(this).find('td:eq(1)').text().replace(/"/g, '""');
+            var name = $(this).find('td:eq(2)').text().replace(/"/g, '""');
+            csv += row + ',"' + code + '","' + name + '"\n';
+        });
+        
+        downloadCSV(csv, 'import_success_' + getCurrentTimestamp() + '.csv');
+    });
+    
+    // CSV ダウンロード共通関数
+    function downloadCSV(csvContent, filename) {
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // タイムスタンプ取得
+    function getCurrentTimestamp() {
+        var now = new Date();
+        return now.getFullYear() + 
+               String(now.getMonth() + 1).padStart(2, '0') + 
+               String(now.getDate()).padStart(2, '0') + '_' +
+               String(now.getHours()).padStart(2, '0') + 
+               String(now.getMinutes()).padStart(2, '0') + 
+               String(now.getSeconds()).padStart(2, '0');
+    }
+});
+</script>
+{% endblock %}

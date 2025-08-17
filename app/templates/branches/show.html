@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}支社詳細 - {{ branch.branch_name }}{% endblock %}
+
+{% block page_title %}支社詳細{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('branches.index') }}">支社管理</a></li>
+<li class="breadcrumb-item active">{{ branch.branch_name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ branch.branch_name }}</h3>
+                <div class="card-tools">
+                    <a href="{{ url_for('branches.edit', branch_id=branch.id) }}" 
+                       class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> 編集
+                    </a>
+                    <a href="{{ url_for('branches.index') }}" 
+                       class="btn btn-secondary btn-sm">
+                        <i class="fas fa-list"></i> 一覧に戻る
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">支社コード:</th>
+                                <td>{{ branch.branch_code }}</td>
+                            </tr>
+                            <tr>
+                                <th>支社名:</th>
+                                <td>{{ branch.branch_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>状態:</th>
+                                <td>
+                                    {% if branch.is_active %}
+                                        <span class="badge badge-success">有効</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">無効</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>プロジェクト数:</th>
+                                <td>{{ branch.to_dict().project_count }}件</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">作成日:</th>
+                                <td>{{ branch.created_at.strftime('%Y-%m-%d %H:%M:%S') if branch.created_at else '' }}</td>
+                            </tr>
+                            <tr>
+                                <th>更新日:</th>
+                                <td>{{ branch.updated_at.strftime('%Y-%m-%d %H:%M:%S') if branch.updated_at else '' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('branches.edit', branch_id=branch.id) }}" 
+                           class="btn btn-warning">
+                            <i class="fas fa-edit"></i> 編集
+                        </a>
+                        <form method="POST" 
+                              action="{{ url_for('branches.toggle_status', branch_id=branch.id) }}" 
+                              style="display: inline;" 
+                              onsubmit="return confirmToggle('{{ branch.branch_name }}', {{ branch.is_active|lower }})">
+                            {% if branch.is_active %}
+                                <button type="submit" class="btn btn-secondary ml-2">
+                                    <i class="fas fa-ban"></i> 無効化
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success ml-2">
+                                    <i class="fas fa-check"></i> 有効化
+                                </button>
+                            {% endif %}
+                        </form>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <form method="POST" 
+                              action="{{ url_for('branches.delete', branch_id=branch.id) }}" 
+                              style="display: inline;"
+                              onsubmit="return confirmDelete('{{ branch.branch_name }}')">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 関連プロジェクト一覧（Task 8で実装予定） -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">関連プロジェクト</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    プロジェクトとの関連付け機能は今後実装予定です。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 削除確認ダイアログ
+function confirmDelete(branchName) {
+    return confirm('支社「' + branchName + '」を削除してもよろしいですか？\n\n注意: この操作は取り消せません。');
+}
+
+// 状態切り替え確認ダイアログ
+function confirmToggle(branchName, isActive) {
+    var action = isActive ? '無効化' : '有効化';
+    return confirm('支社「' + branchName + '」を' + action + 'してもよろしいですか？');
+}
+</script>
+{% endblock %}

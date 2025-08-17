@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+
+{% block title %}プロジェクト検索{% endblock %}
+
+{% block extra_css %}
+<!-- DataTables -->
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet"
+    href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<!-- Fallback to CDN if local files fail -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+<style>
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    /* 数値列の右寄せ */
+    .dt-right {
+        text-align: right;
+    }
+
+    /* 検索フォームのスタイル */
+    .search-form {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-form .form-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .search-form .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    /* 支社選択ボタンのスタイル */
+    .branch-select-btn {
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* モーダル内の支社リスト */
+    .branch-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .branch-item {
+        cursor: pointer;
+        padding: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .branch-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .branch-item:last-child {
+        border-bottom: none;
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1>プロジェクト検索</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.index') }}">プロジェクト一覧</a></li>
+                    <li class="breadcrumb-item active">検索</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <!-- 検索フォーム -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-search mr-2"></i>検索条件
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <form id="searchForm" class="search-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="project_code">プロジェクトコード</label>
+                                <input type="text" class="form-control" id="project_code" name="project_code"
+                                    placeholder="部分一致で検索">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="project_name">プロジェクト名</label>
+                                <input type="text" class="form-control" id="project_name" name="project_name"
+                                    placeholder="部分一致で検索">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="branch_select">支社</label>
+                                <div class="input-group">
+                                    <button type="button" class="btn btn-outline-secondary branch-select-btn form-control"
+                                        id="branch_select" data-toggle="modal" data-target="#branchModal">
+                                        支社を選択してください
+                                    </button>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-danger" id="clear_branch"
+                                            title="選択をクリア">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="branch_id" name="branch_id" value="">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="fiscal_year">売上年度</label>
+                                <select class="form-control" id="fiscal_year" name="fiscal_year">
+                                    <option value="">すべての年度</option>
+                                    {% for year in available_years %}
+                                    <option value="{{ year }}">{{ year }}年度</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>受注角度</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="order_probability_min"
+                                            name="order_probability_min" placeholder="最小値" min="0" max="100" step="0.01">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="order_probability_max"
+                                            name="order_probability_max" placeholder="最大値" min="0" max="100" step="0.01">
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">0〜100の範囲で指定してください</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div class="d-block">
+                                    <button type="submit" class="btn btn-primary mr-2">
+                                        <i class="fas fa-search mr-1"></i>検索
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" id="clear_form">
+                                        <i class="fas fa-eraser mr-1"></i>クリア
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 検索結果 -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list mr-2"></i>検索結果
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-success btn-sm mr-2" id="export-csv-btn">
+                        <i class="fas fa-file-csv"></i> CSV出力
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm mr-2" id="export-excel-btn">
+                        <i class="fas fa-file-excel"></i> Excel出力
+                    </button>
+                    <span class="badge badge-info" id="result_count">0件</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="projectsTable" class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>プロジェクトコード</th>
+                                <th>プロジェクト名</th>
+                                <th>支社</th>
+                                <th>年度</th>
+                                <th>受注角度</th>
+                                <th class="dt-right">売上</th>
+                                <th class="dt-right">経費</th>
+                                <th class="dt-right">粗利</th>
+                                <th>作成日</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- DataTablesで動的に生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 支社選択モーダル -->
+<div class="modal fade" id="branchModal" tabindex="-1" role="dialog" aria-labelledby="branchModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="branchModalLabel">支社選択</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="branch_search">支社名で検索</label>
+                    <input type="text" class="form-control" id="branch_search" placeholder="支社名を入力してください">
+                </div>
+                <div class="branch-list" id="branch_list">
+                    <!-- 支社リストが動的に生成される -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">削除確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>以下のプロジェクトを削除してもよろしいですか？</p>
+                <p><strong id="delete_project_name"></strong></p>
+                <p class="text-danger">この操作は取り消せません。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">削除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables -->
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+<!-- Fallback to CDN if local files fail -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    let table;
+    let selectedBranchId = null;
+    let selectedBranchName = null;
+
+    // DataTablesの初期化
+    function initializeDataTable() {
+        table = $('#projectsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ url_for("projects.api_list") }}',
+                type: 'GET',
+                data: function(d) {
+                    // 検索条件を追加
+                    d.project_code = $('#project_code').val();
+                    d.project_name = $('#project_name').val();
+                    d.branch_id = $('#branch_id').val();
+                    d.fiscal_year = $('#fiscal_year').val();
+                    d.order_probability_min = $('#order_probability_min').val();
+                    d.order_probability_max = $('#order_probability_max').val();
+                }
+            },
+            columns: [
+                { data: 0, name: 'project_code' },
+                { data: 1, name: 'project_name' },
+                { data: 2, name: 'branch_name' },
+                { data: 3, name: 'fiscal_year', className: 'text-center' },
+                { data: 4, name: 'order_probability', className: 'text-center', orderable: false },
+                { data: 5, name: 'revenue', className: 'dt-right', orderable: false },
+                { data: 6, name: 'expenses', className: 'dt-right', orderable: false },
+                { data: 7, name: 'gross_profit', className: 'dt-right' },
+                { data: 8, name: 'created_at', className: 'text-center' },
+                { data: 9, name: 'actions', orderable: false, searchable: false, className: 'text-center' }
+            ],
+            order: [[8, 'desc']], // 作成日で降順ソート
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            language: {
+                processing: "処理中...",
+                search: "検索:",
+                lengthMenu: "_MENU_ 件表示",
+                info: "_START_ から _END_ まで（全 _TOTAL_ 件）",
+                infoEmpty: "0 件中 0 から 0 まで表示",
+                infoFiltered: "（全 _MAX_ 件より抽出）",
+                infoPostFix: "",
+                loadingRecords: "読み込み中...",
+                zeroRecords: "一致するレコードがありません",
+                emptyTable: "テーブルにデータがありません",
+                paginate: {
+                    first: "最初",
+                    previous: "前",
+                    next: "次",
+                    last: "最後"
+                }
+            },
+            responsive: true,
+            drawCallback: function(settings) {
+                // 結果件数を更新
+                const info = table.page.info();
+                $('#result_count').text(info.recordsFiltered + '件');
+            }
+        });
+    }
+
+    // 検索フォームの送信処理
+    $('#searchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // 受注角度の範囲チェック
+        const minProb = parseFloat($('#order_probability_min').val());
+        const maxProb = parseFloat($('#order_probability_max').val());
+        
+        if (!isNaN(minProb) && !isNaN(maxProb) && minProb > maxProb) {
+            alert('受注角度の最小値は最大値以下にしてください。');
+            return;
+        }
+        
+        // DataTablesを再読み込み
+        table.ajax.reload();
+    });
+
+    // フォームクリア処理
+    $('#clear_form').on('click', function() {
+        $('#searchForm')[0].reset();
+        $('#branch_id').val('');
+        $('#branch_select').text('支社を選択してください');
+        selectedBranchId = null;
+        selectedBranchName = null;
+        table.ajax.reload();
+    });
+
+    // CSVエクスポートボタン
+    $('#export-csv-btn').on('click', function() {
+        exportToCSV();
+    });
+
+    // Excelエクスポートボタン
+    $('#export-excel-btn').on('click', function() {
+        exportToExcel();
+    });
+
+    // 支社選択クリア処理
+    $('#clear_branch').on('click', function() {
+        $('#branch_id').val('');
+        $('#branch_select').text('支社を選択してください');
+        selectedBranchId = null;
+        selectedBranchName = null;
+    });
+
+    // 支社モーダルが開かれた時の処理
+    $('#branchModal').on('shown.bs.modal', function() {
+        loadBranches();
+        $('#branch_search').focus();
+    });
+
+    // 支社検索処理
+    $('#branch_search').on('input', function() {
+        const searchTerm = $(this).val();
+        loadBranches(searchTerm);
+    });
+
+    // 支社リストの読み込み
+    function loadBranches(searchTerm = '') {
+        $.ajax({
+            url: '{{ url_for("projects.api_branches_search") }}',
+            type: 'GET',
+            data: { search: searchTerm },
+            success: function(response) {
+                if (response.success) {
+                    displayBranches(response.branches);
+                } else {
+                    $('#branch_list').html('<div class="alert alert-danger">支社の読み込みに失敗しました。</div>');
+                }
+            },
+            error: function() {
+                $('#branch_list').html('<div class="alert alert-danger">支社の読み込み中にエラーが発生しました。</div>');
+            }
+        });
+    }
+
+    // 支社リストの表示
+    function displayBranches(branches) {
+        let html = '';
+        if (branches.length === 0) {
+            html = '<div class="text-center text-muted py-3">該当する支社が見つかりません</div>';
+        } else {
+            branches.forEach(function(branch) {
+                html += `
+                    <div class="branch-item" data-branch-id="${branch.id}" data-branch-name="${branch.branch_name}">
+                        <strong>${branch.branch_code}</strong> - ${branch.branch_name}
+                    </div>
+                `;
+            });
+        }
+        $('#branch_list').html(html);
+    }
+
+    // 支社選択処理
+    $(document).on('click', '.branch-item', function() {
+        selectedBranchId = $(this).data('branch-id');
+        selectedBranchName = $(this).data('branch-name');
+        
+        $('#branch_id').val(selectedBranchId);
+        $('#branch_select').text(selectedBranchName);
+        
+        $('#branchModal').modal('hide');
+    });
+
+    // 削除確認処理
+    window.confirmDelete = function(projectId, projectName) {
+        $('#delete_project_name').text(projectName);
+        $('#deleteForm').attr('action', '{{ url_for("projects.delete", project_id=0) }}'.replace('0', projectId));
+        $('#deleteModal').modal('show');
+    };
+
+    // 削除フォーム送信処理
+    $('#deleteForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const actionUrl = form.attr('action');
+        
+        $.ajax({
+            url: actionUrl,
+            type: 'POST',
+            success: function(response) {
+                $('#deleteModal').modal('hide');
+                // ページをリロードしてフラッシュメッセージを表示
+                window.location.reload();
+            },
+            error: function() {
+                alert('削除処理中にエラーが発生しました。');
+                $('#deleteModal').modal('hide');
+            }
+        });
+    });
+
+    // CSVエクスポート機能
+    function exportToCSV() {
+        exportData('csv', '#export-csv-btn', 'CSV');
+    }
+
+    // Excelエクスポート機能
+    function exportToExcel() {
+        exportData('excel', '#export-excel-btn', 'Excel');
+    }
+
+    // 共通エクスポート機能
+    function exportData(format, buttonSelector, formatName) {
+        // 現在の検索条件を取得
+        var searchParams = new URLSearchParams();
+        
+        // 検索フォームの値を取得
+        var projectCode = $('#project_code').val();
+        if (projectCode) {
+            searchParams.append('project_code', projectCode);
+        }
+        
+        var projectName = $('#project_name').val();
+        if (projectName) {
+            searchParams.append('project_name', projectName);
+        }
+        
+        var branchId = $('#branch_id').val();
+        if (branchId) {
+            searchParams.append('branch_id', branchId);
+        }
+        
+        var fiscalYear = $('#fiscal_year').val();
+        if (fiscalYear) {
+            searchParams.append('fiscal_year', fiscalYear);
+        }
+        
+        var orderProbabilityMin = $('#order_probability_min').val();
+        if (orderProbabilityMin) {
+            searchParams.append('order_probability_min', orderProbabilityMin);
+        }
+        
+        var orderProbabilityMax = $('#order_probability_max').val();
+        if (orderProbabilityMax) {
+            searchParams.append('order_probability_max', orderProbabilityMax);
+        }
+        
+        // エクスポートボタンを無効化
+        var exportBtn = $(buttonSelector);
+        var originalText = exportBtn.html();
+        exportBtn.prop('disabled', true);
+        exportBtn.html('<i class="fas fa-spinner fa-spin"></i> 処理中...');
+        
+        // プレビューAPIを呼び出して件数を確認
+        $.get('/export/preview?' + searchParams.toString())
+            .done(function(response) {
+                if (response.success) {
+                    // 確認ダイアログを表示
+                    var message = `${response.total_count}件のプロジェクトデータを${formatName}形式でエクスポートします。\n\n実行しますか？`;
+                    
+                    if (confirm(message)) {
+                        // ダウンロードを実行
+                        var downloadUrl = `/export/${format}?` + searchParams.toString();
+                        
+                        // 隠しリンクを作成してダウンロードを実行
+                        var link = document.createElement('a');
+                        link.href = downloadUrl;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 成功メッセージを表示
+                        showAlert('success', `${response.total_count}件のデータを${formatName}形式でエクスポートしました。`);
+                    }
+                } else {
+                    showAlert('error', response.error || 'エクスポート処理中にエラーが発生しました。');
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Export preview error:', error);
+                showAlert('error', 'エクスポート処理中にエラーが発生しました。');
+            })
+            .always(function() {
+                // ボタンを元に戻す
+                exportBtn.prop('disabled', false);
+                exportBtn.html(originalText);
+            });
+    }
+    
+    // アラート表示関数
+    function showAlert(type, message) {
+        var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        var iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        
+        var alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="fas ${iconClass} mr-2"></i>
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        
+        // アラートを表示
+        $('.content-header').after(alertHtml);
+        
+        // 5秒後に自動で消す
+        setTimeout(function() {
+            $('.alert').fadeOut();
+        }, 5000);
+    }
+
+    // 初期化
+    initializeDataTable();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% extends "base_test.html" %}
+
+{% block title %}ダッシュボード - プロジェクト収支システム{% endblock %}
+
+{% block page_title %}ダッシュボード{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">ダッシュボード</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js -->
+<link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/chart.js/Chart.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Small boxes (Stat box) -->
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3>{{ stats.total_projects }}</h3>
+        <p>総プロジェクト数</p>
+      </div>
+      <div class="icon">
+        <i class="ion ion-bag"></i>
+      </div>
+      <a href="#" class="small-box-footer">詳細を見る <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3>¥{{ "{:,.0f}".format(stats.total_revenue) }}</h3>
+        <p>総売上</p>
+      </div>
+      <div class="icon">
+        <i class="ion ion-stats-bars"></i>
+      </div>
+      <a href="#" class="small-box-footer">詳細を見る <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3>¥{{ "{:,.0f}".format(stats.total_expenses) }}</h3>
+        <p>総経費</p>
+      </div>
+      <div class="icon">
+        <i class="ion ion-person-add"></i>
+      </div>
+      <a href="#" class="small-box-footer">詳細を見る <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <h3>¥{{ "{:,.0f}".format(stats.total_gross_profit) }}</h3>
+        <p>総粗利</p>
+      </div>
+      <div class="icon">
+        <i class="ion ion-pie-graph"></i>
+      </div>
+      <a href="#" class="small-box-footer">詳細を見る <i class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+</div>
+<!-- /.row -->
+
+<!-- Main row -->
+<div class="row">
+  <!-- Left col -->
+  <section class="col-lg-7 connectedSortable">
+    <!-- Custom tabs (Charts with tabs)-->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-pie mr-1"></i>
+          年度別売上推移
+        </h3>
+        <div class="card-tools">
+          <ul class="nav nav-pills ml-auto">
+            <li class="nav-item">
+              <a class="nav-link active" href="#revenue-chart" data-toggle="tab">売上</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#profit-chart" data-toggle="tab">粗利</a>
+            </li>
+          </ul>
+        </div>
+      </div><!-- /.card-header -->
+      <div class="card-body">
+        <div class="tab-content p-0">
+          <!-- Morris chart - Sales -->
+          <div class="chart tab-pane active" id="revenue-chart" style="position: relative; height: 300px;">
+            <canvas id="revenue-chart-canvas" height="300" style="height: 300px;"></canvas>
+          </div>
+          <div class="chart tab-pane" id="profit-chart" style="position: relative; height: 300px;">
+            <canvas id="profit-chart-canvas" height="300" style="height: 300px;"></canvas>
+          </div>
+        </div>
+      </div><!-- /.card-body -->
+    </div>
+    <!-- /.card -->
+  </section>
+  <!-- /.Left col -->
+
+  <!-- right col (We are only adding the ID to make the widgets sortable)-->
+  <section class="col-lg-5 connectedSortable">
+    <!-- Calendar -->
+    <div class="card bg-gradient-success">
+      <div class="card-header border-0">
+        <h3 class="card-title">
+          <i class="far fa-calendar-alt"></i>
+          最近の更新
+        </h3>
+        <!-- tools card -->
+        <div class="card-tools">
+          <button type="button" class="btn btn-success btn-sm" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+          <button type="button" class="btn btn-success btn-sm" data-card-widget="remove">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <!-- /. tools -->
+      </div>
+      <!-- /.card-header -->
+      <div class="card-body pt-0">
+        <!-- The calendar -->
+        <div id="recent-projects">
+          {% if recent_projects %}
+          {% for project in recent_projects %}
+          <div class="info-box mb-3 bg-white">
+            <span class="info-box-icon bg-info elevation-1"><i class="fas fa-project-diagram"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">{{ project.project_name }}</span>
+              <span class="info-box-number">
+                {{ project.project_code }}
+                <small>¥{{ "{:,.0f}".format(project.revenue) }}</small>
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> まだプロジェクトがありません
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <!-- /.card-body -->
+    </div>
+    <!-- /.card -->
+  </section>
+  <!-- right col -->
+</div>
+<!-- /.row (main row) -->
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/chart.js/Chart.min.js') }}"></script>
+
+<script>
+  $(function () {
+    // Sample data for charts - これは後でAjaxで動的に取得する予定
+    var revenueChartData = {
+      labels: ['2020', '2021', '2022', '2023', '2024'],
+      datasets: [{
+        label: '売上',
+        backgroundColor: 'rgba(60,141,188,0.9)',
+        borderColor: 'rgba(60,141,188,0.8)',
+        pointRadius: false,
+        pointColor: '#3b8bba',
+        pointStrokeColor: 'rgba(60,141,188,1)',
+        pointHighlightFill: '#fff',
+        pointHighlightStroke: 'rgba(60,141,188,1)',
+        data: [10000000, 15000000, 12000000, 18000000, 20000000]
+      }]
+    };
+
+    var profitChartData = {
+      labels: ['2020', '2021', '2022', '2023', '2024'],
+      datasets: [{
+        label: '粗利',
+        backgroundColor: 'rgba(210, 214, 222, 1)',
+        borderColor: 'rgba(210, 214, 222, 1)',
+        pointRadius: false,
+        pointColor: 'rgba(210, 214, 222, 1)',
+        pointStrokeColor: '#c1c7d1',
+        pointHighlightFill: '#fff',
+        pointHighlightStroke: 'rgba(220,220,220,1)',
+        data: [3000000, 4500000, 3600000, 5400000, 6000000]
+      }]
+    };
+
+    var chartOptions = {
+      maintainAspectRatio: false,
+      responsive: true,
+      legend: {
+        display: false
+      },
+      scales: {
+        xAxes: [{
+          gridLines: {
+            display: false,
+          }
+        }],
+        yAxes: [{
+          gridLines: {
+            display: false,
+          }
+        }]
+      }
+    };
+
+    // Revenue Chart
+    var revenueChartCanvas = $('#revenue-chart-canvas').get(0).getContext('2d');
+    var revenueChart = new Chart(revenueChartCanvas, {
+      type: 'line',
+      data: revenueChartData,
+      options: chartOptions
+    });
+
+    // Profit Chart
+    var profitChartCanvas = $('#profit-chart-canvas').get(0).getContext('2d');
+    var profitChart = new Chart(profitChartCanvas, {
+      type: 'line',
+      data: profitChartData,
+      options: chartOptions
+    });
+  });
+</script>
+{% endblock %}

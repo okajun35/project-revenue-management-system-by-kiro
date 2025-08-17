@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if action == 'create' %}新規支社作成{% else %}支社編集{% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if action == 'create' %}新規支社作成{% else %}支社編集{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('branches.index') }}">支社管理</a></li>
+<li class="breadcrumb-item active">
+    {% if action == 'create' %}新規作成{% else %}編集{% endif %}
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {% if action == 'create' %}新規支社作成{% else %}支社編集{% endif %}
+                </h3>
+            </div>
+            
+            <form method="POST" 
+                  action="{% if action == 'create' %}{{ url_for('branches.create') }}{% else %}{{ url_for('branches.update', branch_id=branch.id) }}{% endif %}"
+                  id="branchForm">
+                <div class="card-body">
+                    <!-- 支社コード -->
+                    <div class="form-group">
+                        <label for="branch_code">支社コード <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="branch_code" 
+                               name="branch_code" 
+                               value="{{ branch.branch_code if branch else '' }}"
+                               maxlength="20"
+                               pattern="[A-Za-z0-9\-_]+"
+                               title="英数字、ハイフン、アンダースコアのみ使用可能"
+                               required>
+                        <small class="form-text text-muted">
+                            英数字、ハイフン、アンダースコアのみ使用可能（最大20文字）
+                        </small>
+                    </div>
+
+                    <!-- 支社名 -->
+                    <div class="form-group">
+                        <label for="branch_name">支社名 <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="branch_name" 
+                               name="branch_name" 
+                               value="{{ branch.branch_name if branch else '' }}"
+                               maxlength="100"
+                               required>
+                        <small class="form-text text-muted">
+                            最大100文字
+                        </small>
+                    </div>
+
+                    <!-- 有効フラグ -->
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" 
+                                   class="custom-control-input" 
+                                   id="is_active" 
+                                   name="is_active"
+                                   {% if not branch or branch.is_active %}checked{% endif %}>
+                            <label class="custom-control-label" for="is_active">
+                                有効
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">
+                            無効にすると、プロジェクト作成時の選択肢に表示されません
+                        </small>
+                    </div>
+
+                    {% if branch and action == 'update' %}
+                    <!-- 作成・更新情報 -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>作成日</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ branch.created_at.strftime('%Y-%m-%d %H:%M:%S') if branch.created_at else '' }}"
+                                       readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>更新日</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ branch.updated_at.strftime('%Y-%m-%d %H:%M:%S') if branch.updated_at else '' }}"
+                                       readonly>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if action == 'create' %}作成{% else %}更新{% endif %}
+                            </button>
+                            <a href="{{ url_for('branches.index') }}" class="btn btn-secondary ml-2">
+                                <i class="fas fa-times"></i> キャンセル
+                            </a>
+                        </div>
+                        {% if branch and action == 'update' %}
+                        <div class="col-md-6 text-right">
+                            <form method="POST" 
+                                  action="{{ url_for('branches.delete', branch_id=branch.id) }}" 
+                                  style="display: inline;"
+                                  onsubmit="return confirmDelete('{{ branch.branch_name }}')">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> 削除
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // フォームバリデーション
+    $('#branchForm').on('submit', function(e) {
+        var branchCode = $('#branch_code').val().trim();
+        var branchName = $('#branch_name').val().trim();
+        
+        // 必須項目チェック
+        if (!branchCode) {
+            alert('支社コードは必須です');
+            $('#branch_code').focus();
+            return false;
+        }
+        
+        if (!branchName) {
+            alert('支社名は必須です');
+            $('#branch_name').focus();
+            return false;
+        }
+        
+        // 支社コード形式チェック
+        var codePattern = /^[A-Za-z0-9\-_]+$/;
+        if (!codePattern.test(branchCode)) {
+            alert('支社コードは英数字、ハイフン、アンダースコアのみ使用可能です');
+            $('#branch_code').focus();
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // リアルタイムバリデーション
+    $('#branch_code').on('input', function() {
+        var value = $(this).val();
+        var pattern = /^[A-Za-z0-9\-_]*$/;
+        
+        if (value && !pattern.test(value)) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">英数字、ハイフン、アンダースコアのみ使用可能です</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+});
+
+// 削除確認ダイアログ
+function confirmDelete(branchName) {
+    return confirm('支社「' + branchName + '」を削除してもよろしいですか？\n\n注意: この操作は取り消せません。');
+}
+</script>
+{% endblock %}

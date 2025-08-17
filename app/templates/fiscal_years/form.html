@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">{{ title }}</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('fiscal_years.index') }}">年度管理</a></li>
+                        <li class="breadcrumb-item active">{{ title }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ title }}</h3>
+                        </div>
+                        
+                        <!-- Form start -->
+                        <form method="POST" action="{% if fiscal_year %}{{ url_for('fiscal_years.update', fiscal_year_id=fiscal_year.id) }}{% else %}{{ url_for('fiscal_years.create') }}{% endif %}">
+                            <div class="card-body">
+                                <!-- Year -->
+                                <div class="form-group">
+                                    <label for="year" class="form-label">年度 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="year" name="year" 
+                                           value="{% if fiscal_year %}{{ fiscal_year.year }}{% endif %}"
+                                           min="1900" max="2100" required
+                                           placeholder="例: 2024">
+                                    <small class="form-text text-muted">1900-2100の範囲で入力してください</small>
+                                </div>
+
+                                <!-- Year Name -->
+                                <div class="form-group">
+                                    <label for="year_name" class="form-label">年度名 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="year_name" name="year_name" 
+                                           value="{% if fiscal_year %}{{ fiscal_year.year_name }}{% endif %}"
+                                           maxlength="20" required
+                                           placeholder="例: 2024年度">
+                                    <small class="form-text text-muted">年度を入力すると自動で生成されます</small>
+                                </div>
+                            </div>
+
+                            <!-- Card footer -->
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 
+                                    {% if fiscal_year %}更新{% else %}作成{% endif %}
+                                </button>
+                                <a href="{{ url_for('fiscal_years.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> キャンセル
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 年度が入力されたときに年度名を自動生成
+    $('#year').on('input change', function() {
+        var year = $(this).val();
+        if (year && year.length === 4) {
+            var yearName = year + '年度';
+            // 年度名が空の場合のみ自動設定
+            if ($('#year_name').val() === '' || $('#year_name').val().match(/^\d{4}年度$/)) {
+                $('#year_name').val(yearName);
+            }
+        }
+    });
+    
+    // フォーム送信前のバリデーション
+    $('form').on('submit', function(e) {
+        var isValid = true;
+        var errorMessages = [];
+        
+        // 年度の検証
+        var year = parseInt($('#year').val());
+        if (!year || year < 1900 || year > 2100) {
+            errorMessages.push('年度は1900-2100の範囲で入力してください');
+            isValid = false;
+        }
+        
+        // 年度名の検証
+        var yearName = $('#year_name').val().trim();
+        if (!yearName) {
+            errorMessages.push('年度名は必須です');
+            isValid = false;
+        } else if (yearName.length > 20) {
+            errorMessages.push('年度名は20文字以内で入力してください');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('入力エラー:\n' + errorMessages.join('\n'));
+        }
+    });
+});
+</script>
+{% endblock %}

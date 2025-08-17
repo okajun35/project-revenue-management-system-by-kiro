@@ -1,0 +1,37 @@
+# プロジェクト収支システム - 開発用 Dockerfile
+FROM python:3.11-slim
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# システムの依存関係をインストール
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pythonの依存関係をコピーしてインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 開発用の追加パッケージ
+RUN pip install --no-cache-dir \
+    flask-debugtoolbar \
+    watchdog
+
+# アプリケーションコードをコピー
+COPY . .
+
+# データディレクトリを作成
+RUN mkdir -p /app/data /app/uploads /app/logs
+
+# ポートを公開
+EXPOSE 5000
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+# 開発サーバーで起動
+CMD ["python", "app.py"]

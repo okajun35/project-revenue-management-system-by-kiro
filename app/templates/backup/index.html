@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+
+{% block title %}バックアップ・リストア管理{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">バックアップ・リストア管理</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                        <li class="breadcrumb-item active">バックアップ・リストア</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            
+            <!-- バックアップセクション -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-download"></i>
+                        データバックアップ
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        システム内の全データ（プロジェクト、支社、年度）をJSON形式でバックアップファイルとして出力します。
+                    </p>
+                    
+                    <!-- バックアップ情報表示 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-database"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">バックアップ対象データ</span>
+                                    <span class="info-box-number" id="backup-total-records">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-clock"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">最終更新日時</span>
+                                    <span class="info-box-number" id="backup-last-update">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- バックアップ詳細情報 -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="small-box bg-primary">
+                                <div class="inner">
+                                    <h3 id="projects-count">0</h3>
+                                    <p>プロジェクト</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-project-diagram"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-success">
+                                <div class="inner">
+                                    <h3 id="branches-count">0</h3>
+                                    <p>支社</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-warning">
+                                <div class="inner">
+                                    <h3 id="fiscal-years-count">0</h3>
+                                    <p>年度</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary btn-lg" id="create-backup-btn">
+                            <i class="fas fa-download"></i>
+                            バックアップファイルを作成・ダウンロード
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- リストアセクション -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-upload"></i>
+                        データリストア
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>注意:</strong> リストアを実行すると、現在のデータは全て削除され、バックアップファイルのデータに置き換えられます。
+                        実行前に必ず現在のデータをバックアップしてください。
+                    </div>
+                    
+                    <!-- ファイルアップロード -->
+                    <div class="form-group">
+                        <label for="backup-file">バックアップファイル（JSON形式）</label>
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="backup-file" accept=".json">
+                                <label class="custom-file-label" for="backup-file">ファイルを選択...</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button class="btn btn-info" type="button" id="upload-backup-btn" disabled>
+                                    <i class="fas fa-upload"></i>
+                                    アップロード
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            このシステムで作成されたバックアップファイル（JSON形式）を選択してください。
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- リストアプレビュー -->
+            <div class="card" id="restore-preview-card" style="display: none;">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-eye"></i>
+                        リストアプレビュー
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div id="restore-preview-content">
+                        <!-- プレビュー内容がここに表示される -->
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-danger btn-lg" id="execute-restore-btn">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            リストアを実行する
+                        </button>
+                        <button type="button" class="btn btn-secondary ml-2" id="cancel-restore-btn">
+                            <i class="fas fa-times"></i>
+                            キャンセル
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+<!-- リストア確認モーダル -->
+<div class="modal fade" id="restore-confirm-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h4 class="modal-title text-white">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    リストア実行の確認
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> 重要な警告</h5>
+                    <p>この操作を実行すると、以下の変更が行われます：</p>
+                    <ul>
+                        <li><strong>現在のデータは全て削除されます</strong></li>
+                        <li>バックアップファイルのデータに完全に置き換えられます</li>
+                        <li>この操作は取り消すことができません</li>
+                    </ul>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>現在のデータ</h6>
+                        <ul class="list-unstyled">
+                            <li>プロジェクト: <span id="current-projects-count">0</span>件</li>
+                            <li>支社: <span id="current-branches-count">0</span>件</li>
+                            <li>年度: <span id="current-fiscal-years-count">0</span>件</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>リストア後のデータ</h6>
+                        <ul class="list-unstyled">
+                            <li>プロジェクト: <span id="restore-projects-count">0</span>件</li>
+                            <li>支社: <span id="restore-branches-count">0</span>件</li>
+                            <li>年度: <span id="restore-fiscal-years-count">0</span>件</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="form-group mt-3">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="confirm-restore-checkbox">
+                        <label class="custom-control-label" for="confirm-restore-checkbox">
+                            <strong>上記の内容を理解し、リストアを実行することに同意します</strong>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="final-restore-btn" disabled>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    リストアを実行
+                </button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    キャンセル
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 処理中モーダル -->
+<div class="modal fade" id="processing-modal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="sr-only">処理中...</span>
+                </div>
+                <p id="processing-message">処理中です...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    let currentSessionKey = null;
+    let currentPreviewData = null;
+    
+    // バックアップ情報を読み込み
+    loadBackupInfo();
+    
+    // ファイル選択時の処理
+    $('#backup-file').change(function() {
+        const file = this.files[0];
+        if (file) {
+            $('.custom-file-label').text(file.name);
+            $('#upload-backup-btn').prop('disabled', false);
+        } else {
+            $('.custom-file-label').text('ファイルを選択...');
+            $('#upload-backup-btn').prop('disabled', true);
+        }
+    });
+    
+    // バックアップ作成ボタン
+    $('#create-backup-btn').click(function() {
+        showProcessingModal('バックアップファイルを作成中...');
+        
+        // バックアップファイルをダウンロード
+        window.location.href = '/backup/create';
+        
+        // 少し待ってからモーダルを閉じる
+        setTimeout(function() {
+            hideProcessingModal();
+        }, 2000);
+    });
+    
+    // バックアップファイルアップロード
+    $('#upload-backup-btn').click(function() {
+        const fileInput = document.getElementById('backup-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            showAlert('ファイルを選択してください。', 'warning');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('backup_file', file);
+        
+        showProcessingModal('バックアップファイルを検証中...');
+        
+        $.ajax({
+            url: '/backup/upload',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                hideProcessingModal();
+                
+                if (response.success) {
+                    currentSessionKey = response.session_key;
+                    currentPreviewData = response.preview;
+                    showRestorePreview(response.preview);
+                    showAlert('バックアップファイルが正常にアップロードされました。', 'success');
+                } else {
+                    showAlert(response.error, 'error');
+                }
+            },
+            error: function(xhr) {
+                hideProcessingModal();
+                const response = xhr.responseJSON;
+                showAlert(response ? response.error : 'アップロード中にエラーが発生しました。', 'error');
+            }
+        });
+    });
+    
+    // リストア実行ボタン
+    $('#execute-restore-btn').click(function() {
+        if (!currentSessionKey || !currentPreviewData) {
+            showAlert('リストア対象のデータがありません。', 'error');
+            return;
+        }
+        
+        // 確認モーダルにデータを設定
+        $('#current-projects-count').text(currentPreviewData.current_data.projects);
+        $('#current-branches-count').text(currentPreviewData.current_data.branches);
+        $('#current-fiscal-years-count').text(currentPreviewData.current_data.fiscal_years);
+        
+        $('#restore-projects-count').text(currentPreviewData.backup_data.projects);
+        $('#restore-branches-count').text(currentPreviewData.backup_data.branches);
+        $('#restore-fiscal-years-count').text(currentPreviewData.backup_data.fiscal_years);
+        
+        // チェックボックスをリセット
+        $('#confirm-restore-checkbox').prop('checked', false);
+        $('#final-restore-btn').prop('disabled', true);
+        
+        // モーダルを表示
+        $('#restore-confirm-modal').modal('show');
+    });
+    
+    // 確認チェックボックス
+    $('#confirm-restore-checkbox').change(function() {
+        $('#final-restore-btn').prop('disabled', !this.checked);
+    });
+    
+    // 最終リストア実行
+    $('#final-restore-btn').click(function() {
+        $('#restore-confirm-modal').modal('hide');
+        
+        showProcessingModal('データをリストア中...<br><small>この処理には時間がかかる場合があります</small>');
+        
+        $.ajax({
+            url: '/backup/restore',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                session_key: currentSessionKey,
+                confirm: true
+            }),
+            success: function(response) {
+                hideProcessingModal();
+                
+                if (response.success) {
+                    const stats = response.statistics;
+                    const message = `リストアが正常に完了しました。<br>` +
+                                  `プロジェクト: ${stats.projects_created}件<br>` +
+                                  `支社: ${stats.branches_created}件<br>` +
+                                  `年度: ${stats.fiscal_years_created}件`;
+                    
+                    showAlert(message, 'success');
+                    
+                    // プレビューをクリア
+                    clearRestorePreview();
+                    
+                    // バックアップ情報を再読み込み
+                    loadBackupInfo();
+                } else {
+                    showAlert(response.error, 'error');
+                }
+            },
+            error: function(xhr) {
+                hideProcessingModal();
+                const response = xhr.responseJSON;
+                showAlert(response ? response.error : 'リストア中にエラーが発生しました。', 'error');
+            }
+        });
+    });
+    
+    // キャンセルボタン
+    $('#cancel-restore-btn').click(function() {
+        clearRestorePreview();
+    });
+    
+    function loadBackupInfo() {
+        $.get('/backup/info')
+            .done(function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    $('#backup-total-records').text(data.total_records + ' 件');
+                    $('#projects-count').text(data.projects_count);
+                    $('#branches-count').text(data.branches_count);
+                    $('#fiscal-years-count').text(data.fiscal_years_count);
+                    
+                    if (data.latest_update) {
+                        const date = new Date(data.latest_update);
+                        $('#backup-last-update').text(date.toLocaleString('ja-JP'));
+                    } else {
+                        $('#backup-last-update').text('データなし');
+                    }
+                }
+            })
+            .fail(function() {
+                $('#backup-total-records').text('読み込みエラー');
+                $('#backup-last-update').text('読み込みエラー');
+            });
+    }
+    
+    function showRestorePreview(previewData) {
+        const backupInfo = previewData.backup_info;
+        const currentData = previewData.current_data;
+        const backupData = previewData.backup_data;
+        
+        let html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>バックアップファイル情報</h5>
+                    <table class="table table-sm">
+                        <tr><th>作成日時:</th><td>${backupInfo.created_at ? new Date(backupInfo.created_at).toLocaleString('ja-JP') : '不明'}</td></tr>
+                        <tr><th>バージョン:</th><td>${backupInfo.version || '不明'}</td></tr>
+                        <tr><th>説明:</th><td>${backupInfo.description || '不明'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>データ比較</h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>項目</th><th>現在</th><th>リストア後</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>プロジェクト</td><td>${currentData.projects}</td><td>${backupData.projects}</td></tr>
+                            <tr><td>支社</td><td>${currentData.branches}</td><td>${backupData.branches}</td></tr>
+                            <tr><td>年度</td><td>${currentData.fiscal_years}</td><td>${backupData.fiscal_years}</td></tr>
+                            <tr class="font-weight-bold"><td>合計</td><td>${currentData.total}</td><td>${backupData.total}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        $('#restore-preview-content').html(html);
+        $('#restore-preview-card').show();
+    }
+    
+    function clearRestorePreview() {
+        $('#restore-preview-card').hide();
+        $('#restore-preview-content').empty();
+        currentSessionKey = null;
+        currentPreviewData = null;
+        
+        // ファイル選択をクリア
+        $('#backup-file').val('');
+        $('.custom-file-label').text('ファイルを選択...');
+        $('#upload-backup-btn').prop('disabled', true);
+    }
+    
+    function showProcessingModal(message) {
+        $('#processing-message').html(message);
+        $('#processing-modal').modal('show');
+    }
+    
+    function hideProcessingModal() {
+        $('#processing-modal').modal('hide');
+    }
+    
+    function showAlert(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 
+                          type === 'warning' ? 'alert-warning' : 'alert-danger';
+        
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        `;
+        
+        // 既存のアラートを削除
+        $('.alert').remove();
+        
+        // 新しいアラートを表示
+        $('.content-wrapper .content').prepend(alertHtml);
+        
+        // 自動で消去（成功メッセージの場合）
+        if (type === 'success') {
+            setTimeout(function() {
+                $('.alert').fadeOut();
+            }, 5000);
+        }
+    }
+});
+</script>
+{% endblock %}

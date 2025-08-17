@@ -1,0 +1,139 @@
+<!-- Main Sidebar Container -->
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+  <!-- Brand Logo -->
+  <a href="{{ url_for('main.dashboard') }}" class="brand-link">
+    <img src="{{ url_for('static', filename='AdminLTE-3.2.0/dist/img/AdminLTELogo.png') }}" 
+         alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+    <span class="brand-text font-weight-light">収支システム</span>
+  </a>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Sidebar user panel (optional) -->
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+      <div class="image">
+        <img src="{{ url_for('static', filename='AdminLTE-3.2.0/dist/img/user2-160x160.jpg') }}" 
+             class="img-circle elevation-2" alt="User Image">
+      </div>
+      <div class="info">
+        <a href="#" class="d-block">管理者</a>
+      </div>
+    </div>
+
+    <!-- SidebarSearch Form -->
+    <div class="form-inline">
+      <div class="input-group" data-widget="sidebar-search">
+        <input class="form-control form-control-sidebar" type="search" placeholder="検索" aria-label="Search">
+        <div class="input-group-append">
+          <button class="btn btn-sidebar">
+            <i class="fas fa-search fa-fw"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <nav class="mt-2">
+      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+        <!-- Dashboard -->
+        <li class="nav-item">
+          <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+            <i class="nav-icon fas fa-tachometer-alt"></i>
+            <p>ダッシュボード</p>
+          </a>
+        </li>
+
+        <!-- Projects -->
+        <li class="nav-item {% if request.endpoint and request.endpoint.startswith('projects.') %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.endpoint and request.endpoint.startswith('projects.') %}active{% endif %}">
+            <i class="nav-icon fas fa-project-diagram"></i>
+            <p>
+              プロジェクト管理
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{{ url_for('projects.index') }}" class="nav-link {% if request.endpoint == 'projects.index' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>プロジェクト一覧</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('projects.new') }}" class="nav-link {% if request.endpoint == 'projects.new' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>新規作成</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Master Data -->
+        <li class="nav-item {% if (request.endpoint and request.endpoint.startswith('branches.')) or (request.endpoint and request.endpoint.startswith('fiscal_years.')) %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if (request.endpoint and request.endpoint.startswith('branches.')) or (request.endpoint and request.endpoint.startswith('fiscal_years.')) %}active{% endif %}">
+            <i class="nav-icon fas fa-database"></i>
+            <p>
+              マスター管理
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{{ url_for('branches.index') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('branches.') %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>支社管理</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('fiscal_years.index') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('fiscal_years.') %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>年度管理</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Import/Export -->
+        <li class="nav-item {% if request.endpoint and (request.endpoint.startswith('import.') or request.endpoint.startswith('export.')) %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.endpoint and (request.endpoint.startswith('import.') or request.endpoint.startswith('export.')) %}active{% endif %}">
+            <i class="nav-icon fas fa-exchange-alt"></i>
+            <p>
+              インポート・エクスポート
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{{ url_for('import.index') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('import.') %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>CSVインポート</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('export.export_csv') }}" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>CSVエクスポート</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('export.export_excel') }}" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>Excelエクスポート</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Backup/Restore -->
+        <li class="nav-item">
+          <a href="{{ url_for('backup.index') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('backup.') %}active{% endif %}">
+            <i class="nav-icon fas fa-shield-alt"></i>
+            <p>バックアップ・リストア</p>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- /.sidebar-menu -->
+  </div>
+  <!-- /.sidebar -->
+</aside>

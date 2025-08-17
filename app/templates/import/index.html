@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}ファイルインポート{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">ファイルインポート</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                        <li class="breadcrumb-item active">ファイルインポート</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-file-upload"></i>
+                                ファイルアップロード
+                            </h3>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('import.upload_file') }}" enctype="multipart/form-data">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="card-body">
+                                <!-- ファイル形式選択 -->
+                                <div class="form-group">
+                                    {{ form.file_type.label(class="form-label") }}
+                                    {{ form.file_type(class="form-control") }}
+                                    {% if form.file_type.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.file_type.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- ファイル選択 -->
+                                <div class="form-group">
+                                    <label for="file" class="form-label">ファイル選択</label>
+                                    <div class="input-group">
+                                        <div class="custom-file">
+                                            <input type="file" class="custom-file-input" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                                            <label class="custom-file-label" for="file">ファイルを選択してください</label>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        対応形式: CSV (.csv), Excel (.xlsx, .xls)
+                                    </small>
+                                </div>
+
+                                <!-- 注意事項 -->
+                                <div class="alert alert-info">
+                                    <h5><i class="icon fas fa-info"></i> インポート時の注意事項</h5>
+                                    <ul class="mb-0">
+                                        <li>ファイルには以下の列が必要です：
+                                            <ul>
+                                                <li>プロジェクトコード</li>
+                                                <li>プロジェクト名</li>
+                                                <li>支社名</li>
+                                                <li>売上の年度</li>
+                                                <li>受注角度（〇、△、×または100、50、0）</li>
+                                                <li>売上（契約金）</li>
+                                                <li>経費（トータル）</li>
+                                            </ul>
+                                        </li>
+                                        <li>支社が存在しない場合は自動的に作成されます</li>
+                                        <li>プロジェクトコードが重複している場合はエラーになります</li>
+                                        <li>CSVファイルはUTF-8エンコーディングで保存してください</li>
+                                    </ul>
+                                </div>
+
+                                <!-- サンプルファイル -->
+                                <div class="alert alert-secondary">
+                                    <h6><i class="icon fas fa-download"></i> サンプルファイル</h6>
+                                    <p class="mb-2">インポート用のサンプルファイルをダウンロードできます：</p>
+                                    <a href="{{ url_for('export.export_csv') }}?sample=1" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-file-csv"></i> CSVサンプル
+                                    </a>
+                                    <a href="{{ url_for('export.export_excel') }}?sample=1" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-file-excel"></i> Excelサンプル
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i>
+                                    ファイルをアップロード
+                                </button>
+                                <a href="{{ url_for('projects.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i>
+                                    キャンセル
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+$(document).ready(function() {
+    // ファイル選択時にファイル名を表示
+    $('.custom-file-input').on('change', function() {
+        var fileName = $(this).val().split('\\').pop();
+        $(this).siblings('.custom-file-label').addClass('selected').html(fileName);
+    });
+    
+    // ファイル形式に応じてaccept属性を変更
+    $('#file_type').on('change', function() {
+        var fileType = $(this).val();
+        var fileInput = $('#file');
+        
+        if (fileType === 'csv') {
+            fileInput.attr('accept', '.csv');
+        } else if (fileType === 'excel') {
+            fileInput.attr('accept', '.xlsx,.xls');
+        } else {
+            fileInput.attr('accept', '.csv,.xlsx,.xls');
+        }
+    });
+});
+</script>
+{% endblock %}

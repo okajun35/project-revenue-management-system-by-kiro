@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}インポートプレビュー{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">インポートプレビュー</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ホーム</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('import.index') }}">CSVインポート</a></li>
+                        <li class="breadcrumb-item active">プレビュー</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <!-- 統計情報 -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3>{{ row_count }}</h3>
+                            <p>総データ数</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3>{{ validation_summary.valid_rows if validation_summary else 0 }}</h3>
+                            <p>有効データ数</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ validation_summary.error_rows if validation_summary else 0 }}</h3>
+                            <p>エラーデータ数</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3>{{ validation_summary.duplicate_count if validation_summary else 0 }}</h3>
+                            <p>重複データ数</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-copy"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 検証結果サマリー -->
+            {% if validation_summary %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-clipboard-check"></i>
+                                データ検証結果
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-box">
+                                        <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">成功率</span>
+                                            <span class="info-box-number">{{ "%.1f"|format(validation_summary.success_rate) }}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="progress-group">
+                                        有効データ
+                                        <span class="float-right"><b>{{ validation_summary.valid_rows }}</b>/{{ validation_summary.total_rows }}</span>
+                                        <div class="progress progress-sm">
+                                            <div class="progress-bar bg-success" style="width: {{ validation_summary.success_rate }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if validation_summary.error_rows > 0 %}
+                            <div class="alert alert-warning">
+                                <h5><i class="icon fas fa-exclamation-triangle"></i> 注意</h5>
+                                <p>{{ validation_summary.error_rows }}件のデータにエラーが見つかりました。これらの行はインポート時にスキップされます。</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if validation_summary.duplicate_count > 0 %}
+                            <div class="alert alert-danger">
+                                <h5><i class="icon fas fa-copy"></i> 重複エラー</h5>
+                                <p>{{ validation_summary.duplicate_count }}件の重複データが見つかりました。</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 重複データ詳細 -->
+            {% if duplicates and duplicates|length > 0 %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-danger">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-copy"></i>
+                                重複データ詳細
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            {% for duplicate in duplicates %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-exclamation-triangle"></i> {{ duplicate.message }}</h6>
+                                <p class="mb-0">該当行: {{ duplicate.rows|join(', ') }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 検証エラー詳細 -->
+            {% if validation_errors and validation_errors|length > 0 %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                検証エラー詳細
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>行番号</th>
+                                            <th>エラー内容</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for error in validation_errors %}
+                                        <tr>
+                                            <td>{{ error.row }}</td>
+                                            <td>{{ error.errors|join(', ') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- プレビューデータ -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-eye"></i>
+                                データプレビュー（最初の10行）
+                            </h3>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped" id="previewTable">
+                                    <thead>
+                                        <tr>
+                                            <th>行番号</th>
+                                            <th>状態</th>
+                                            {% for key in preview_data[0].keys() if key != '_validation' %}
+                                            <th>{{ key }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in preview_data %}
+                                        <tr class="{% if row._validation and row._validation.has_errors %}table-danger{% else %}table-success{% endif %}">
+                                            <td>{{ loop.index }}</td>
+                                            <td>
+                                                {% if row._validation and row._validation.has_errors %}
+                                                    <span class="badge badge-danger" title="エラーあり">
+                                                        <i class="fas fa-times"></i> エラー
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-success" title="正常">
+                                                        <i class="fas fa-check"></i> 正常
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            {% for key, value in row.items() if key != '_validation' %}
+                                            <td>
+                                                {% if value is not none and value != '' %}
+                                                    {{ value }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% if row._validation and row._validation.has_errors %}
+                                        <tr class="table-danger">
+                                            <td colspan="{{ (preview_data[0].keys()|list|length) }}">
+                                                <small class="text-danger">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    エラー: {{ row._validation.errors|join(', ') }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 実行確認 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-check-circle"></i>
+                                インポート実行確認
+                            </h3>
+                        </div>
+                        
+                        <div class="card-body">
+                            {% if validation_summary and validation_summary.valid_rows > 0 %}
+                            <div class="alert alert-info">
+                                <h5><i class="icon fas fa-info-circle"></i> インポート実行確認</h5>
+                                <p>以下の内容でインポートを実行します：</p>
+                                <ul>
+                                    <li><strong>有効データ:</strong> {{ validation_summary.valid_rows }}件が正常にインポートされます</li>
+                                    {% if validation_summary.error_rows > 0 %}
+                                    <li><strong>エラーデータ:</strong> {{ validation_summary.error_rows }}件はスキップされます</li>
+                                    {% endif %}
+                                    {% if validation_summary.duplicate_count > 0 %}
+                                    <li><strong>重複データ:</strong> {{ validation_summary.duplicate_count }}件の重複があります</li>
+                                    {% endif %}
+                                    <li>支社が存在しない場合は自動的に作成されます</li>
+                                    <li>エラーがある場合は詳細レポートをダウンロードできます</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <form method="POST" action="{{ url_for('import.execute_import') }}" id="importForm">
+                                        <button type="submit" class="btn btn-success btn-lg" {% if validation_summary.valid_rows == 0 %}disabled{% endif %}>
+                                            <i class="fas fa-play"></i>
+                                            インポートを実行 ({{ validation_summary.valid_rows }}件)
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <a href="{{ url_for('import.cancel_import') }}" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-times"></i>
+                                        キャンセル
+                                    </a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-danger">
+                                <h5><i class="icon fas fa-times-circle"></i> インポート不可</h5>
+                                <p>有効なデータが見つかりません。すべてのデータにエラーがあるため、インポートを実行できません。</p>
+                                <p>データを修正してから再度アップロードしてください。</p>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12 text-center">
+                                    <a href="{{ url_for('import.index') }}" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-upload"></i>
+                                        新しいファイルをアップロード
+                                    </a>
+                                    <a href="{{ url_for('import.cancel_import') }}" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-times"></i>
+                                        キャンセル
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+$(document).ready(function() {
+    // DataTablesの初期化
+    $('#previewTable').DataTable({
+        "paging": false,
+        "searching": false,
+        "ordering": false,
+        "info": false,
+        "responsive": true,
+        "autoWidth": false
+    });
+    
+    // 実行確認
+    $('#importForm').on('submit', function(e) {
+        {% if validation_summary %}
+        var message = 'インポートを実行しますか？\n\n';
+        message += '有効データ: {{ validation_summary.valid_rows }}件\n';
+        {% if validation_summary.error_rows > 0 %}
+        message += 'エラーデータ: {{ validation_summary.error_rows }}件（スキップされます）\n';
+        {% endif %}
+        {% if validation_summary.duplicate_count > 0 %}
+        message += '重複データ: {{ validation_summary.duplicate_count }}件\n';
+        {% endif %}
+        
+        if (!confirm(message)) {
+            e.preventDefault();
+        }
+        {% endif %}
+    });
+    
+    // エラー行のハイライト
+    $('.table-danger').hover(
+        function() {
+            $(this).addClass('bg-danger');
+        },
+        function() {
+            $(this).removeClass('bg-danger');
+        }
+    );
+});
+</script>
+{% endblock %}

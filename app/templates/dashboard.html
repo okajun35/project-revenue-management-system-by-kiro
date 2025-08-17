@@ -1,0 +1,970 @@
+{% extends "base.html" %}
+
+{% block title %}ダッシュボード - プロジェクト収支システム{% endblock %}
+
+{% block page_title %}ダッシュボード{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">ダッシュボード</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js -->
+<link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/chart.js/Chart.min.css') }}">
+<!-- Select2 -->
+<link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/select2/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Year Selection -->
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <h4 class="mb-0">
+              <i class="fas fa-tachometer-alt mr-2"></i>
+              ダッシュボード
+            </h4>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group mb-0">
+              <label for="year-select" class="form-label">表示年度:</label>
+              <select id="year-select" class="form-control" style="width: 200px; display: inline-block;">
+                <option value="">全年度</option>
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if year==stats.current_year %}selected{% endif %}>{{ year }}年度</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Small boxes (Stat box) -->
+<div class="row">
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3 id="total-projects">{{ stats.total_projects }}</h3>
+        <p>総プロジェクト数</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-project-diagram"></i>
+      </div>
+      <a href="{{ url_for('projects.index') }}" class="small-box-footer">詳細を見る <i
+          class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3 id="total-revenue">¥{{ "{:,.0f}".format(stats.total_revenue) }}</h3>
+        <p>総売上</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-yen-sign"></i>
+      </div>
+      <a href="{{ url_for('projects.index') }}" class="small-box-footer">詳細を見る <i
+          class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3 id="total-expenses">¥{{ "{:,.0f}".format(stats.total_expenses) }}</h3>
+        <p>総経費</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-calculator"></i>
+      </div>
+      <a href="{{ url_for('projects.index') }}" class="small-box-footer">詳細を見る <i
+          class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+  <div class="col-lg-3 col-6">
+    <!-- small box -->
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <h3 id="total-gross-profit">¥{{ "{:,.0f}".format(stats.total_gross_profit) }}</h3>
+        <p>総粗利</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <a href="{{ url_for('projects.index') }}" class="small-box-footer">詳細を見る <i
+          class="fas fa-arrow-circle-right"></i></a>
+    </div>
+  </div>
+  <!-- ./col -->
+</div>
+<!-- /.row -->
+
+<!-- クイックアクション -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-bolt mr-1"></i>
+          クイックアクション
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 col-sm-6 col-12">
+            <a href="{{ url_for('projects.new') }}" class="btn btn-primary btn-block">
+              <i class="fas fa-plus mr-2"></i>新規プロジェクト作成
+            </a>
+          </div>
+          <div class="col-md-3 col-sm-6 col-12">
+            <a href="{{ url_for('projects.search') }}" class="btn btn-info btn-block">
+              <i class="fas fa-search mr-2"></i>プロジェクト検索
+            </a>
+          </div>
+          <div class="col-md-3 col-sm-6 col-12">
+            <a href="{{ url_for('projects.index') }}" class="btn btn-success btn-block">
+              <i class="fas fa-list mr-2"></i>プロジェクト一覧
+            </a>
+          </div>
+          <div class="col-md-3 col-sm-6 col-12">
+            <a href="{{ url_for('branches.index') }}" class="btn btn-warning btn-block">
+              <i class="fas fa-building mr-2"></i>支社管理
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /.row -->
+
+<!-- Main row -->
+<div class="row">
+  <!-- Left col -->
+  <section class="col-lg-8 connectedSortable">
+    <!-- Custom tabs (Charts with tabs)-->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-line mr-1"></i>
+          年度別売上推移
+        </h3>
+        <div class="card-tools">
+          <ul class="nav nav-pills ml-auto">
+            <li class="nav-item">
+              <a class="nav-link active" href="#revenue-chart" data-toggle="tab">売上</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#profit-chart" data-toggle="tab">粗利</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#comparison-chart" data-toggle="tab">比較</a>
+            </li>
+          </ul>
+        </div>
+      </div><!-- /.card-header -->
+      <div class="card-body">
+        <div class="tab-content p-0">
+          <!-- Revenue chart -->
+          <div class="chart tab-pane active" id="revenue-chart" style="position: relative; height: 300px;">
+            <canvas id="revenue-chart-canvas" height="300" style="height: 300px;"></canvas>
+          </div>
+          <!-- Profit chart -->
+          <div class="chart tab-pane" id="profit-chart" style="position: relative; height: 300px;">
+            <canvas id="profit-chart-canvas" height="300" style="height: 300px;"></canvas>
+          </div>
+          <!-- Comparison chart -->
+          <div class="chart tab-pane" id="comparison-chart" style="position: relative; height: 300px;">
+            <canvas id="comparison-chart-canvas" height="300" style="height: 300px;"></canvas>
+          </div>
+        </div>
+      </div><!-- /.card-body -->
+    </div>
+    <!-- /.card -->
+
+    <!-- 月別売上推移 -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-calendar-alt mr-1"></i>
+          月別売上推移
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- フィルタ -->
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label for="monthly-year-select" class="form-label">年度:</label>
+            <select id="monthly-year-select" class="form-control">
+              <option value="">選択してください</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="branch-filter" class="form-label">支社:</label>
+            <select id="branch-filter" class="form-control" multiple>
+              <!-- 動的に追加 -->
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="probability-filter" class="form-label">受注角度:</label>
+            <select id="probability-filter" class="form-control" multiple>
+              <!-- 動的に追加 -->
+            </select>
+          </div>
+        </div>
+        
+        <!-- チャート表示オプション -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="btn-group btn-group-toggle" data-toggle="buttons">
+              <label class="btn btn-outline-primary active">
+                <input type="radio" name="chart-type" value="overall" checked> 全体
+              </label>
+              <label class="btn btn-outline-info">
+                <input type="radio" name="chart-type" value="branches"> 支社別
+              </label>
+              <label class="btn btn-outline-success">
+                <input type="radio" name="chart-type" value="both"> 全体+支社別
+              </label>
+            </div>
+            <div class="btn-group btn-group-toggle ml-2" data-toggle="buttons">
+              <label class="btn btn-outline-secondary active">
+                <input type="radio" name="data-type" value="revenue" checked> 売上
+              </label>
+              <label class="btn btn-outline-warning">
+                <input type="radio" name="data-type" value="profit"> 粗利
+              </label>
+              <label class="btn btn-outline-dark">
+                <input type="radio" name="data-type" value="count"> 件数
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- チャート -->
+        <div style="position: relative; height: 400px;">
+          <canvas id="monthly-chart-canvas" height="400" style="height: 400px;"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- /.card -->
+
+    <!-- 支社別統計 -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-building mr-1"></i>
+          支社別統計
+        </h3>
+        <div class="card-tools">
+          <div class="form-group mb-0 mr-3" style="display: inline-block;">
+            <label for="branch-stats-year-select" class="form-label mr-2" style="font-weight: normal; margin-bottom: 0;">年度:</label>
+            <select id="branch-stats-year-select" class="form-control form-control-sm" style="width: 120px; display: inline-block;">
+              <option value="">全年度</option>
+              {% for year in available_years %}
+              <option value="{{ year }}" {% if year==current_year %}selected{% endif %}>{{ year }}年度</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm" id="branch-stats-table">
+            <thead>
+              <tr>
+                <th>支社名</th>
+                <th class="text-right">プロジェクト数</th>
+                <th class="text-right">売上</th>
+                <th class="text-right">経費</th>
+                <th class="text-right">粗利</th>
+                <th class="text-right">粗利率</th>
+              </tr>
+            </thead>
+            <tbody id="branch-stats-tbody">
+              {% if branch_stats %}
+              {% for branch in branch_stats %}
+              <tr>
+                <td>
+                  <strong>{{ branch.branch_name }}</strong>
+                  <br><small class="text-muted">{{ branch.branch_code }}</small>
+                </td>
+                <td class="text-right">{{ branch.project_count }}</td>
+                <td class="text-right">¥{{ "{:,.0f}".format(branch.total_revenue) }}</td>
+                <td class="text-right">¥{{ "{:,.0f}".format(branch.total_expenses) }}</td>
+                <td class="text-right">
+                  <span class="{% if branch.total_gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ¥{{ "{:,.0f}".format(branch.total_gross_profit) }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <span class="{% if branch.gross_profit_rate >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ "{:.1f}".format(branch.gross_profit_rate) }}%
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">データがありません</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- /.card -->
+  </section>
+  <!-- /.Left col -->
+
+  <!-- right col -->
+  <section class="col-lg-4 connectedSortable">
+    <!-- 最近の更新 -->
+    <div class="card bg-gradient-success">
+      <div class="card-header border-0">
+        <h3 class="card-title">
+          <i class="far fa-calendar-alt"></i>
+          最近の更新
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-success btn-sm" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body pt-0">
+        <div id="recent-projects">
+          {% if recent_projects %}
+          {% for project in recent_projects %}
+          <div class="info-box mb-3 bg-white">
+            <span class="info-box-icon bg-info elevation-1"><i class="fas fa-project-diagram"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">{{ project.project_name }}</span>
+              <span class="info-box-number">
+                {{ project.project_code }}
+                <small>¥{{ "{:,.0f}".format(project.revenue) }}</small>
+              </span>
+              <small class="text-muted">{{ project.branch_name }}</small>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> まだプロジェクトがありません
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- /.card -->
+
+    <!-- 受注角度分布 -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-pie mr-1"></i>
+          受注角度分布
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="probability-chart" style="height: 200px;"></canvas>
+        <div id="probability-legend" class="mt-3"></div>
+      </div>
+    </div>
+    <!-- /.card -->
+  </section>
+  <!-- right col -->
+</div>
+<!-- /.row (main row) -->
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+<!-- Select2 -->
+<script src="{{ url_for('static', filename='AdminLTE-3.2.0/plugins/select2/js/select2.full.min.js') }}"></script>
+
+<script>
+  $(document).ready(function () {
+
+    var revenueChart, profitChart, comparisonChart, probabilityChart, monthlyChart;
+
+    // チャートオプション（Chart.js v2対応）
+    var chartOptions = {
+      maintainAspectRatio: false,
+      responsive: true,
+      legend: {
+        display: false
+      },
+      scales: {
+        xAxes: [{
+          gridLines: {
+            display: false,
+          }
+        }],
+        yAxes: [{
+          gridLines: {
+            display: false,
+          },
+          ticks: {
+            callback: function (value) {
+              return '¥' + value.toLocaleString();
+            }
+          }
+        }]
+      }
+    };
+
+    // 比較チャート用オプション
+    var comparisonChartOptions = {
+      maintainAspectRatio: false,
+      responsive: true,
+      legend: {
+        display: true,
+        position: 'top'
+      },
+      scales: {
+        xAxes: [{
+          gridLines: {
+            display: false,
+          }
+        }],
+        yAxes: [{
+          gridLines: {
+            display: true,
+          },
+          ticks: {
+            callback: function (value) {
+              return '¥' + value.toLocaleString();
+            }
+          }
+        }]
+      }
+    };
+
+    // チャートデータを取得して描画
+    function loadChartData() {
+      $.get('/api/chart-data')
+        .done(function (data) {
+          if (!data.years || data.years.length === 0) {
+            $('#revenue-chart-canvas').parent().html('<div class="alert alert-info">データがありません</div>');
+            $('#profit-chart-canvas').parent().html('<div class="alert alert-info">データがありません</div>');
+            $('#comparison-chart-canvas').parent().html('<div class="alert alert-info">データがありません</div>');
+            return;
+          }
+
+          // 売上チャート
+          var revenueChartData = {
+            labels: data.years,
+            datasets: [{
+              label: '売上',
+              backgroundColor: 'rgba(60,141,188,0.2)',
+              borderColor: 'rgba(60,141,188,0.8)',
+              pointRadius: 4,
+              pointColor: '#3b8bba',
+              pointStrokeColor: 'rgba(60,141,188,1)',
+              pointHighlightFill: '#fff',
+              pointHighlightStroke: 'rgba(60,141,188,1)',
+              data: data.revenues
+            }]
+          };
+
+          // 粗利チャート
+          var profitChartData = {
+            labels: data.years,
+            datasets: [{
+              label: '粗利',
+              backgroundColor: 'rgba(40,167,69,0.2)',
+              borderColor: 'rgba(40,167,69,0.8)',
+              pointRadius: 4,
+              pointColor: '#28a745',
+              pointStrokeColor: 'rgba(40,167,69,1)',
+              pointHighlightFill: '#fff',
+              pointHighlightStroke: 'rgba(40,167,69,1)',
+              data: data.profits
+            }]
+          };
+
+          // 比較チャート
+          var comparisonChartData = {
+            labels: data.years,
+            datasets: [{
+              label: '売上',
+              backgroundColor: 'rgba(60,141,188,0.2)',
+              borderColor: 'rgba(60,141,188,0.8)',
+              data: data.revenues
+            }, {
+              label: '経費',
+              backgroundColor: 'rgba(255,193,7,0.2)',
+              borderColor: 'rgba(255,193,7,0.8)',
+              data: data.expenses
+            }, {
+              label: '粗利',
+              backgroundColor: 'rgba(40,167,69,0.2)',
+              borderColor: 'rgba(40,167,69,0.8)',
+              data: data.profits
+            }]
+          };
+
+          // チャートを描画
+          var revenueChartCanvas = $('#revenue-chart-canvas').get(0).getContext('2d');
+          if (revenueChart) {
+            revenueChart.destroy();
+          }
+          revenueChart = new Chart(revenueChartCanvas, {
+            type: 'line',
+            data: revenueChartData,
+            options: chartOptions
+          });
+
+          var profitChartCanvas = $('#profit-chart-canvas').get(0).getContext('2d');
+          if (profitChart) {
+            profitChart.destroy();
+          }
+          profitChart = new Chart(profitChartCanvas, {
+            type: 'line',
+            data: profitChartData,
+            options: chartOptions
+          });
+
+          var comparisonChartCanvas = $('#comparison-chart-canvas').get(0).getContext('2d');
+          if (comparisonChart) {
+            comparisonChart.destroy();
+          }
+          comparisonChart = new Chart(comparisonChartCanvas, {
+            type: 'line',
+            data: comparisonChartData,
+            options: comparisonChartOptions
+          });
+
+        })
+        .fail(function (xhr, status, error) {
+          console.error('チャートデータの取得に失敗しました:', error);
+        });
+    }
+
+    // 受注角度分布チャートを読み込み
+    function loadProbabilityChart(year) {
+      var url = '/api/order-probability-distribution';
+      if (year) {
+        url += '?year=' + year;
+      }
+
+      $.get(url)
+        .done(function (data) {
+          var distribution = data.distribution;
+          var labels = [];
+          var counts = [];
+          var revenues = [];
+          var colors = ['#dc3545', '#ffc107', '#28a745']; // 赤、黄、緑
+
+          Object.keys(distribution).forEach(function(key, index) {
+            labels.push(key);
+            counts.push(distribution[key].count);
+            revenues.push(distribution[key].total_revenue);
+          });
+
+          if (labels.length === 0) {
+            $('#probability-chart').parent().html('<div class="alert alert-info">データがありません</div>');
+            return;
+          }
+
+          var probabilityChartData = {
+            labels: labels,
+            datasets: [{
+              data: counts,
+              backgroundColor: colors.slice(0, labels.length),
+              borderColor: colors.slice(0, labels.length),
+              borderWidth: 1
+            }]
+          };
+
+          var probabilityChartCanvas = $('#probability-chart').get(0).getContext('2d');
+          if (probabilityChart) {
+            probabilityChart.destroy();
+          }
+          probabilityChart = new Chart(probabilityChartCanvas, {
+            type: 'doughnut',
+            data: probabilityChartData,
+            options: {
+              maintainAspectRatio: false,
+              responsive: true,
+              legend: {
+                display: false
+              }
+            }
+          });
+
+          // 凡例を手動で作成
+          var legendHtml = '';
+          labels.forEach(function(label, index) {
+            var count = counts[index];
+            var revenue = revenues[index];
+            legendHtml += '<div class="d-flex justify-content-between align-items-center mb-1">';
+            legendHtml += '<span><i class="fas fa-circle" style="color: ' + colors[index] + ';"></i> ' + label + '</span>';
+            legendHtml += '<span class="badge badge-secondary">' + count + '件 / ¥' + revenue.toLocaleString() + '</span>';
+            legendHtml += '</div>';
+          });
+          $('#probability-legend').html(legendHtml);
+
+        })
+        .fail(function (xhr, status, error) {
+          console.error('受注角度分布データの取得に失敗しました:', error);
+        });
+    }
+
+    // 支社別統計を更新
+    function updateBranchStats(year) {
+      var url = '/api/branch-stats';
+      if (year) {
+        url += '?year=' + year;
+      }
+
+      $.get(url)
+        .done(function (data) {
+          var tbody = $('#branch-stats-tbody');
+          tbody.empty();
+
+          if (data.branch_stats.length === 0) {
+            tbody.append('<tr><td colspan="6" class="text-center text-muted">データがありません</td></tr>');
+            return;
+          }
+
+          data.branch_stats.forEach(function(branch) {
+            var profitClass = branch.total_gross_profit >= 0 ? 'text-success' : 'text-danger';
+            var rateClass = branch.gross_profit_rate >= 0 ? 'text-success' : 'text-danger';
+            
+            var row = '<tr>';
+            row += '<td><strong>' + branch.branch_name + '</strong><br><small class="text-muted">' + branch.branch_code + '</small></td>';
+            row += '<td class="text-right">' + branch.project_count + '</td>';
+            row += '<td class="text-right">¥' + branch.total_revenue.toLocaleString() + '</td>';
+            row += '<td class="text-right">¥' + branch.total_expenses.toLocaleString() + '</td>';
+            row += '<td class="text-right"><span class="' + profitClass + '">¥' + branch.total_gross_profit.toLocaleString() + '</span></td>';
+            row += '<td class="text-right"><span class="' + rateClass + '">' + branch.gross_profit_rate.toFixed(1) + '%</span></td>';
+            row += '</tr>';
+            
+            tbody.append(row);
+          });
+        })
+        .fail(function (xhr, status, error) {
+          console.error('支社別統計データの取得に失敗しました:', error);
+        });
+    }
+
+    // 統計データを更新
+    function updateStats(year) {
+      var url = '/api/dashboard-data';
+      if (year) {
+        url += '?year=' + year;
+      }
+
+      $.get(url)
+        .done(function (data) {
+          $('#total-projects').text(data.total_projects);
+          $('#total-revenue').text('¥' + data.total_revenue.toLocaleString());
+          $('#total-expenses').text('¥' + data.total_expenses.toLocaleString());
+          $('#total-gross-profit').text('¥' + data.total_gross_profit.toLocaleString());
+
+          // 粗利の色を変更
+          var profitElement = $('#total-gross-profit');
+          var profitBox = profitElement.closest('.small-box');
+          if (data.total_gross_profit >= 0) {
+            profitBox.removeClass('bg-danger').addClass('bg-success');
+          } else {
+            profitBox.removeClass('bg-success').addClass('bg-danger');
+          }
+        })
+        .fail(function (xhr, status, error) {
+          console.error('統計データの取得に失敗しました:', error);
+        });
+    }
+
+    // 年度選択の変更イベント（全体統計用）
+    $('#year-select').on('change', function () {
+      var selectedYear = $(this).val();
+      updateStats(selectedYear);
+      updateBranchStats(selectedYear);
+      loadProbabilityChart(selectedYear);
+    });
+
+    // 支社別統計専用の年度選択イベント
+    $('#branch-stats-year-select').on('change', function () {
+      var selectedYear = $(this).val();
+      updateBranchStats(selectedYear);
+    });
+
+    // 初期化
+    if (typeof Chart === 'undefined') {
+      $('.chart canvas').parent().html('<div class="alert alert-warning">Chart.jsの読み込みに失敗しました</div>');
+      return;
+    }
+
+    // 月別チャート関連の変数
+    var filterOptions = {};
+    var currentMonthlyData = {};
+
+    // フィルタオプションを読み込み
+    function loadFilterOptions() {
+      $.get('/api/filter-options')
+        .done(function(data) {
+          filterOptions = data;
+          
+          // 年度選択を更新
+          var yearSelect = $('#monthly-year-select');
+          yearSelect.empty().append('<option value="">選択してください</option>');
+          data.years.forEach(function(year) {
+            yearSelect.append('<option value="' + year + '">' + year + '年度</option>');
+          });
+          
+          // 支社選択を更新
+          var branchSelect = $('#branch-filter');
+          branchSelect.empty();
+          data.branches.forEach(function(branch) {
+            branchSelect.append('<option value="' + branch.id + '">' + branch.name + '</option>');
+          });
+          
+          // 受注角度選択を更新
+          var probSelect = $('#probability-filter');
+          probSelect.empty();
+          data.order_probabilities.forEach(function(prob) {
+            probSelect.append('<option value="' + prob.value + '">' + prob.label + '</option>');
+          });
+          
+          // Select2を初期化
+          $('#branch-filter').select2({
+            theme: 'bootstrap4',
+            placeholder: '支社を選択（複数選択可）',
+            allowClear: true
+          });
+          
+          $('#probability-filter').select2({
+            theme: 'bootstrap4',
+            placeholder: '受注角度を選択（複数選択可）',
+            allowClear: true
+          });
+          
+          // デフォルト年度を設定
+          if (data.years.length > 0) {
+            yearSelect.val(data.years[0]);
+            loadMonthlyChart();
+          }
+        })
+        .fail(function(xhr, status, error) {
+          console.error('フィルタオプションの取得に失敗しました:', error);
+        });
+    }
+
+    // 月別チャートを読み込み
+    function loadMonthlyChart() {
+      var year = $('#monthly-year-select').val();
+      if (!year) return;
+      
+      var branchIds = $('#branch-filter').val() || [];
+      var probabilities = $('#probability-filter').val() || [];
+      
+      var params = {
+        year: year
+      };
+      
+      if (branchIds.length > 0) {
+        branchIds.forEach(function(id) {
+          params['branch_ids'] = params['branch_ids'] || [];
+          params['branch_ids'].push(id);
+        });
+      }
+      
+      if (probabilities.length > 0) {
+        probabilities.forEach(function(prob) {
+          params['order_probabilities'] = params['order_probabilities'] || [];
+          params['order_probabilities'].push(prob);
+        });
+      }
+      
+      $.get('/api/monthly-revenue-trend', params)
+        .done(function(data) {
+          currentMonthlyData = data;
+          updateMonthlyChart();
+        })
+        .fail(function(xhr, status, error) {
+          console.error('月別データの取得に失敗しました:', error);
+        });
+    }
+
+    // 月別チャートを更新
+    function updateMonthlyChart() {
+      if (!currentMonthlyData.months) return;
+      
+      var chartType = $('input[name="chart-type"]:checked').val();
+      var dataType = $('input[name="data-type"]:checked').val();
+      
+      var datasets = [];
+      var colors = [
+        'rgba(60,141,188,0.8)',   // 青
+        'rgba(40,167,69,0.8)',    // 緑
+        'rgba(255,193,7,0.8)',    // 黄
+        'rgba(220,53,69,0.8)',    // 赤
+        'rgba(108,117,125,0.8)',  // グレー
+        'rgba(255,87,34,0.8)',    // オレンジ
+        'rgba(156,39,176,0.8)',   // 紫
+        'rgba(0,188,212,0.8)'     // シアン
+      ];
+      
+      // データタイプに応じてデータを選択
+      var getDataByType = function(dataObj) {
+        switch(dataType) {
+          case 'revenue': return dataObj.revenues;
+          case 'profit': return dataObj.profits;
+          case 'count': return dataObj.counts;
+          default: return dataObj.revenues;
+        }
+      };
+      
+      var getLabel = function() {
+        switch(dataType) {
+          case 'revenue': return '売上';
+          case 'profit': return '粗利';
+          case 'count': return '件数';
+          default: return '売上';
+        }
+      };
+      
+      // 全体データを追加
+      if (chartType === 'overall' || chartType === 'both') {
+        datasets.push({
+          label: '全体 - ' + getLabel(),
+          data: getDataByType(currentMonthlyData.overall),
+          borderColor: colors[0],
+          backgroundColor: colors[0].replace('0.8', '0.2'),
+          borderWidth: 3,
+          fill: false
+        });
+      }
+      
+      // 支社別データを追加
+      if (chartType === 'branches' || chartType === 'both') {
+        currentMonthlyData.branches.forEach(function(branch, index) {
+          var colorIndex = chartType === 'both' ? index + 1 : index;
+          datasets.push({
+            label: branch.branch_name + ' - ' + getLabel(),
+            data: getDataByType(branch),
+            borderColor: colors[colorIndex % colors.length],
+            backgroundColor: colors[colorIndex % colors.length].replace('0.8', '0.2'),
+            borderWidth: 2,
+            fill: false
+          });
+        });
+      }
+      
+      var chartData = {
+        labels: currentMonthlyData.months,
+        datasets: datasets
+      };
+      
+      var chartOptions = {
+        maintainAspectRatio: false,
+        responsive: true,
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: true,
+            },
+            scaleLabel: {
+              display: true,
+              labelString: '月'
+            }
+          }],
+          yAxes: [{
+            gridLines: {
+              display: true,
+            },
+            scaleLabel: {
+              display: true,
+              labelString: dataType === 'count' ? '件数' : '金額'
+            },
+            ticks: {
+              callback: function(value) {
+                if (dataType === 'count') {
+                  return value + '件';
+                } else {
+                  return '¥' + value.toLocaleString();
+                }
+              }
+            }
+          }]
+        },
+        tooltips: {
+          callbacks: {
+            label: function(tooltipItem, data) {
+              var label = data.datasets[tooltipItem.datasetIndex].label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (dataType === 'count') {
+                label += tooltipItem.yLabel + '件';
+              } else {
+                label += '¥' + tooltipItem.yLabel.toLocaleString();
+              }
+              return label;
+            }
+          }
+        }
+      };
+      
+      var monthlyChartCanvas = $('#monthly-chart-canvas').get(0).getContext('2d');
+      if (monthlyChart) {
+        monthlyChart.destroy();
+      }
+      monthlyChart = new Chart(monthlyChartCanvas, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
+      });
+    }
+
+    // イベントリスナー
+    $('#monthly-year-select, #branch-filter, #probability-filter').on('change', function() {
+      loadMonthlyChart();
+    });
+    
+    $('input[name="chart-type"], input[name="data-type"]').on('change', function() {
+      updateMonthlyChart();
+    });
+
+    // 初期データを読み込み
+    loadChartData();
+    loadProbabilityChart();
+    loadFilterOptions();
+  });
+</script>
+
+{% endblock %}

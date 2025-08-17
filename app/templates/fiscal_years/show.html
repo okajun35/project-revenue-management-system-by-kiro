@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}年度詳細 - {{ fiscal_year.year_name }}{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">年度詳細</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('fiscal_years.index') }}">年度管理</a></li>
+                        <li class="breadcrumb-item active">{{ fiscal_year.year_name }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <!-- 年度情報カード -->
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ fiscal_year.year_name }}</h3>
+                            <div class="card-tools">
+                                <a href="{{ url_for('fiscal_years.edit', fiscal_year_id=fiscal_year.id) }}" 
+                                   class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> 編集
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-4">年度:</dt>
+                                        <dd class="col-sm-8">{{ fiscal_year.year }}</dd>
+                                        
+                                        <dt class="col-sm-4">年度名:</dt>
+                                        <dd class="col-sm-8">{{ fiscal_year.year_name }}</dd>
+                                        
+                                        <dt class="col-sm-4">状態:</dt>
+                                        <dd class="col-sm-8">
+                                            {% if fiscal_year.is_active %}
+                                                <span class="badge badge-success">有効</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">無効</span>
+                                            {% endif %}
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-5">プロジェクト数:</dt>
+                                        <dd class="col-sm-7">
+                                            <span class="badge badge-info">{{ fiscal_year.projects|length }}</span>
+                                        </dd>
+                                        
+                                        <dt class="col-sm-5">作成日:</dt>
+                                        <dd class="col-sm-7">{{ fiscal_year.created_at.strftime('%Y-%m-%d %H:%M') if fiscal_year.created_at else '-' }}</dd>
+                                        
+                                        <dt class="col-sm-5">更新日:</dt>
+                                        <dd class="col-sm-7">{{ fiscal_year.updated_at.strftime('%Y-%m-%d %H:%M') if fiscal_year.updated_at else '-' }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <a href="{{ url_for('fiscal_years.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 関連プロジェクト一覧 -->
+                    {% if fiscal_year.projects %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">関連プロジェクト ({{ fiscal_year.projects|length }}件)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>プロジェクトコード</th>
+                                            <th>プロジェクト名</th>
+                                            <th>支社</th>
+                                            <th>受注角度</th>
+                                            <th class="text-right">売上</th>
+                                            <th class="text-right">経費</th>
+                                            <th class="text-right">粗利</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in fiscal_year.projects %}
+                                        <tr>
+                                            <td>{{ project.project_code }}</td>
+                                            <td>{{ project.project_name }}</td>
+                                            <td>{{ project.branch.branch_name if project.branch else '-' }}</td>
+                                            <td class="text-center">
+                                                {% if project.order_probability == 100 %}
+                                                    <span class="badge badge-success">{{ project.order_probability_symbol }} {{ project.order_probability }}%</span>
+                                                {% elif project.order_probability == 50 %}
+                                                    <span class="badge badge-warning">{{ project.order_probability_symbol }} {{ project.order_probability }}%</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">{{ project.order_probability_symbol }} {{ project.order_probability }}%</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right">{{ "{:,.2f}".format(project.revenue) }}</td>
+                                            <td class="text-right">{{ "{:,.2f}".format(project.expenses) }}</td>
+                                            <td class="text-right {% if project.gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ "{:,.2f}".format(project.gross_profit) }}
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="{{ url_for('projects.show', project_id=project.id) }}" 
+                                                   class="btn btn-info btn-sm" title="詳細">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">関連プロジェクト</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                この年度に関連するプロジェクトはありません。
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

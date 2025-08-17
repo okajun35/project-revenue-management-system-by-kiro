@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">{{ title }}</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">ダッシュボード</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.index') }}">プロジェクト一覧</a></li>
+                        <li class="breadcrumb-item active">{{ title }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ title }}</h3>
+                        </div>
+                        
+                        <!-- Form start -->
+                        <form method="POST" action="{% if project %}{{ url_for('projects.update', project_id=project.id) }}{% else %}{{ url_for('projects.create') }}{% endif %}">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="card-body">
+                                <!-- Project Code -->
+                                <div class="form-group">
+                                    {{ form.project_code.label(class="form-label") }}
+                                    {{ form.project_code(class="form-control" + (" is-invalid" if form.project_code.errors else "")) }}
+                                    {% if form.project_code.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.project_code.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">英数字、ハイフン、アンダースコアのみ使用可能です</small>
+                                </div>
+
+                                <!-- Project Name -->
+                                <div class="form-group">
+                                    {{ form.project_name.label(class="form-label") }}
+                                    {{ form.project_name(class="form-control" + (" is-invalid" if form.project_name.errors else "")) }}
+                                    {% if form.project_name.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.project_name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Branch -->
+                                <div class="form-group">
+                                    {{ form.branch_id.label(class="form-label") }}
+                                    {{ form.branch_id(class="form-control" + (" is-invalid" if form.branch_id.errors else "")) }}
+                                    {% if form.branch_id.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.branch_id.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">プロジェクトが所属する支社を選択してください</small>
+                                </div>
+
+                                <!-- Fiscal Year -->
+                                <div class="form-group">
+                                    {{ form.fiscal_year.label(class="form-label") }}
+                                    {{ form.fiscal_year(class="form-control" + (" is-invalid" if form.fiscal_year.errors else "")) }}
+                                    {% if form.fiscal_year.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.fiscal_year.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Order Probability -->
+                                <div class="form-group">
+                                    {{ form.order_probability.label(class="form-label") }}
+                                    {{ form.order_probability(class="form-control" + (" is-invalid" if form.order_probability.errors else "")) }}
+                                    {% if form.order_probability.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.order_probability.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Revenue -->
+                                <div class="form-group">
+                                    {{ form.revenue.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.revenue(class="form-control" + (" is-invalid" if form.revenue.errors else ""), id="revenue") }}
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">円</span>
+                                        </div>
+                                    </div>
+                                    {% if form.revenue.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.revenue.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Expenses -->
+                                <div class="form-group">
+                                    {{ form.expenses.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.expenses(class="form-control" + (" is-invalid" if form.expenses.errors else ""), id="expenses") }}
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">円</span>
+                                        </div>
+                                    </div>
+                                    {% if form.expenses.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.expenses.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Gross Profit (Calculated) -->
+                                <div class="form-group">
+                                    <label class="form-label">粗利（自動計算）</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="gross-profit" readonly placeholder="0.00">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">円</span>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">売上 - 経費で自動計算されます</small>
+                                </div>
+                            </div>
+
+                            <!-- Card footer -->
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 
+                                    {% if project %}更新{% else %}作成{% endif %}
+                                </button>
+                                <a href="{{ url_for('projects.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> キャンセル
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 粗利の自動計算
+    function calculateGrossProfit() {
+        var revenue = parseFloat($('#revenue').val()) || 0;
+        var expenses = parseFloat($('#expenses').val()) || 0;
+        var grossProfit = revenue - expenses;
+        
+        // 数値をフォーマットして表示
+        $('#gross-profit').val(grossProfit.toLocaleString('ja-JP', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }));
+        
+        // 粗利の色を変更（正の値は緑、負の値は赤）
+        if (grossProfit >= 0) {
+            $('#gross-profit').removeClass('text-danger').addClass('text-success');
+        } else {
+            $('#gross-profit').removeClass('text-success').addClass('text-danger');
+        }
+    }
+    
+    // 売上または経費の値が変更されたときに粗利を再計算
+    $('#revenue, #expenses').on('input change', function() {
+        calculateGrossProfit();
+    });
+    
+    // ページ読み込み時に初期計算
+    calculateGrossProfit();
+    
+    // フォーム送信前のバリデーション
+    $('form').on('submit', function(e) {
+        var isValid = true;
+        var errorMessages = [];
+        
+        // プロジェクトコードの検証
+        var projectCode = $('#project_code').val().trim();
+        if (!projectCode) {
+            errorMessages.push('プロジェクトコードは必須です');
+            isValid = false;
+        } else if (!/^[A-Za-z0-9\-_]+$/.test(projectCode)) {
+            errorMessages.push('プロジェクトコードは英数字、ハイフン、アンダースコアのみ使用可能です');
+            isValid = false;
+        }
+        
+        // プロジェクト名の検証
+        var projectName = $('#project_name').val().trim();
+        if (!projectName) {
+            errorMessages.push('プロジェクト名は必須です');
+            isValid = false;
+        }
+        
+        // 支社の検証
+        var branchId = parseInt($('#branch_id').val());
+        if (!branchId || branchId === 0) {
+            errorMessages.push('支社を選択してください');
+            isValid = false;
+        }
+        
+        // 売上の年度の検証
+        var fiscalYear = parseInt($('#fiscal_year').val());
+        if (!fiscalYear || fiscalYear < 1900 || fiscalYear > 2100) {
+            errorMessages.push('売上の年度は1900-2100の範囲で入力してください');
+            isValid = false;
+        }
+        
+        // 売上の検証
+        var revenue = parseFloat($('#revenue').val());
+        if (isNaN(revenue) || revenue < 0) {
+            errorMessages.push('売上は0以上の値を入力してください');
+            isValid = false;
+        }
+        
+        // 経費の検証
+        var expenses = parseFloat($('#expenses').val());
+        if (isNaN(expenses) || expenses < 0) {
+            errorMessages.push('経費は0以上の値を入力してください');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('入力エラー:\n' + errorMessages.join('\n'));
+        }
+    });
+    
+    // 数値入力フィールドのフォーマット
+    $('#revenue, #expenses').on('blur', function() {
+        var value = parseFloat($(this).val());
+        if (!isNaN(value)) {
+            $(this).val(value.toFixed(2));
+        }
+    });
+});
+</script>
+{% endblock %}
