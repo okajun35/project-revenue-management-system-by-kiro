@@ -111,7 +111,7 @@ pip install -r requirements.txt
 ```bash
 make setup
 # または
-python init_db.py
+python scripts/init_db.py
 ```
 
 ### 3. 開発用サンプルデータの作成
@@ -129,16 +129,16 @@ make dev-data
 #### 豊富なデモデータ（推奨）
 ```bash
 # 初期データベース作成
-python init_db.py
+python scripts/init_db.py
 
 # 基本マスターデータ（支社・年度）
-python init_sample_data.py
+python scripts/init_sample_data.py
 
 # 豊富なプロジェクトデータ（複数年度・複数支社）
-python create_sample_data.py
+python scripts/create_sample_data.py
 
 # 月別データの追加（ダッシュボード表示用）
-python add_monthly_sample_data.py
+python scripts/add_monthly_sample_data.py
 ```
 
 #### ワンコマンドでデモ環境構築

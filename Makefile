@@ -63,14 +63,14 @@ test-coverage:
 # 基本サンプルデータ作成
 sample-data:
 	@echo "📊 基本サンプルデータを作成中..."
-	python init_sample_data.py
+	python scripts/init_sample_data.py
 
 # 豊富なデモデータ作成
 demo-data:
 	@echo "🎭 豊富なデモデータを作成中..."
-	python init_sample_data.py
-	python create_sample_data.py
-	python add_monthly_sample_data.py
+	python scripts/init_sample_data.py
+	python scripts/create_sample_data.py
+	python scripts/add_monthly_sample_data.py
 	@echo "✅ デモデータ作成完了"
 
 # デモ環境起動（データ作成 + サーバー起動）
@@ -85,18 +85,18 @@ demo:
 # サンプルデータ削除
 clear-sample-data:
 	@echo "🧹 サンプルデータを削除中..."
-	python create_sample_data.py clear
+	python scripts/create_sample_data.py clear
 
 # Docker開発環境
 docker-dev:
 	@echo "🐳 Docker開発環境を起動中..."
-	docker-compose -f docker-compose.dev.yml up -d
+	docker-compose -f docker/dev/docker-compose.dev.yml up -d
 	@echo "✅ 開発環境が起動しました: http://localhost:5000"
 
 # Docker本番環境
 docker-prod:
 	@echo "🐳 Docker本番環境を起動中..."
-	docker-compose -f docker-compose.prod.yml up -d
+	docker-compose -f docker/prod/docker-compose.prod.yml up -d
 	@echo "✅ 本番環境が起動しました: http://localhost"
 
 # Dockerセットアップテスト
@@ -107,13 +107,13 @@ docker-test:
 # Docker環境停止
 docker-stop:
 	@echo "🛑 Docker環境を停止中..."
-	docker-compose -f docker-compose.dev.yml down
-	docker-compose -f docker-compose.prod.yml down
+	docker-compose -f docker/dev/docker-compose.dev.yml down
+	docker-compose -f docker/prod/docker-compose.prod.yml down
 
 # データベース初期化
 init-db:
 	@echo "🗄️ データベースを初期化中..."
-	python init_db.py
+	python scripts/init_db.py
 
 # バックアップ作成
 backup:
@@ -180,7 +180,7 @@ logs:
 # Docker ログ確認
 docker-logs:
 	@echo "📋 Dockerログを確認中..."
-	docker-compose -f docker-compose.prod.yml logs -f
+	docker-compose -f docker/prod/docker-compose.prod.yml logs -f
 
 # システム状態確認
 status:
