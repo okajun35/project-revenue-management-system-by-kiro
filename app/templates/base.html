@@ -20,7 +20,7 @@
   
   <!-- Theme style -->
   <link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE-3.2.0/dist/css/adminlte.min.css') }}"
-        onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css';"
+  onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css';">
   
   {% block extra_css %}{% endblock %}
 </head>
@@ -181,6 +181,9 @@
 {% endwith %}
 </script>
 
+{% block vendor_js %}{% endblock %}
+{% block page_js %}{% endblock %}
+{# Legacy compatibility: some templates may still override `scripts` #}
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}エラー {{ code }} - {{ name }}{% endblock %}
+{% block page_title %}エラーが発生しました{% endblock %}
+{% block content %}
+<div class="alert alert-danger">
+  <h4 class="alert-heading">{{ code }} - {{ name }}</h4>
+  <p>{{ description or 'リクエストの処理中にエラーが発生しました。' }}</p>
+  <hr>
+  <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">ホームへ戻る</a>
+</div>
+{% endblock %}

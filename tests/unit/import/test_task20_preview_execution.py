@@ -329,7 +329,7 @@ NEW001,新規プロジェクト,東京支社2,2024,△,2000000,1500000"""
                 }
             
             # ImportServiceをモック
-            with patch('app.import_routes.ImportService') as mock_service:
+            with patch('app.routes.importing.ImportService') as mock_service:
                 mock_instance = mock_service.return_value
                 mock_instance.get_preview_data.return_value = {
                     'success': True,

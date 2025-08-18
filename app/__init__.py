@@ -27,21 +27,13 @@ def create_app(config_name=None):
     # Initialize extensions with app
     db.init_app(app)
     
-    # Register blueprints
-    from app.routes import main_bp
-    from app.project_routes import project_bp
-    from app.branch_routes import branch_bp
-    from app.fiscal_year_routes import fiscal_year_bp
-    from app.export_routes import export_bp
-    from app.import_routes import import_bp
-    from app.backup_routes import backup_bp
-    app.register_blueprint(main_bp)
-    app.register_blueprint(project_bp)
-    app.register_blueprint(branch_bp)
-    app.register_blueprint(fiscal_year_bp)
-    app.register_blueprint(export_bp)
-    app.register_blueprint(import_bp)
-    app.register_blueprint(backup_bp)
+    # Register blueprints (centralized)
+    from app.controllers.blueprints import register_blueprints
+    register_blueprints(app)
+
+    # Register error handlers (centralized)
+    from app.controllers.error_handlers import register_error_handlers
+    register_error_handlers(app)
     
     # 静的ファイル配信の改善
     @app.after_request
