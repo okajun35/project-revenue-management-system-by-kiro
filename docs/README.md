@@ -1,5 +1,16 @@
 # ドキュメント
 
+## 変更履歴（テスト環境・ダッシュボード初期化関連）
+
+- テスト実行時は `FLASK_ENV=testing` を使用し、テスト専用DB（`data/test_sample.db`）へ分離しました。
+	- Makefileの `make test` と `make test-coverage` は自動的に `FLASK_ENV=testing` を設定します。
+	- 直接pytestを実行する場合は、`FLASK_ENV=testing` を付与してください。
+- 初回起動時にDBが未初期化でもダッシュボードが500にならないように、以下を導入しました。
+	- `app/__init__.py` にて `@app.before_request` でテーブル存在チェックし、不足時に `db.create_all()` を実行
+	- `DashboardService` 各メソッドで `OperationalError` を捕捉して空データを返すフォールバックを実装
+
+これにより、開発/本番DBを保護しつつ、初回起動やデータ未投入時でもアプリが安定して表示されます。
+
 このディレクトリには、プロジェクトの各種ドキュメントが含まれています。
 
 ## 📋 ファイル一覧

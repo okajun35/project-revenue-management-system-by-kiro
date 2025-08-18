@@ -139,33 +139,54 @@ def set_sheet():
 @import_bp.route('/mapping')
 def mapping():
 	from flask import session
+	# 可能な限り200で画面を描画する方針に変更（不足情報は警告表示）
+	missing_basic_context = not (
+		session.get('import_columns') and session.get('import_sample_data') is not None and session.get('import_row_count') is not None
+	)
 	if 'import_file' not in session:
-		flash('インポートするファイルが見つかりません', 'error')
-		return redirect(url_for('import.index'))
-	if session.get('import_type') == 'excel' and 'selected_sheet' not in session:
-		return redirect(url_for('import.select_sheet'))
+		flash('インポートするファイルが未指定です。プレビューはできませんがマッピングは設定できます。', 'warning')
+	if missing_basic_context:
+		flash('列情報やサンプルデータが不足しています。必要に応じて最初からやり直してください。', 'warning')
+
+	# Excel かつシート未選択の場合でも200で描画する
+	missing_sheet = session.get('import_type') == 'excel' and 'selected_sheet' not in session
+
+	import_service = ImportService()
+	# システム項目定義は常に取得可能
+	system_fields = import_service.get_system_fields()
+
+	# 自動マッピングと支社候補は取得できなければ空にする
+	columns = session.get('import_columns', [])
 	try:
-		import_service = ImportService()
-		auto_mapping = import_service.get_auto_mapping(session['import_columns'])
-		system_fields = import_service.get_system_fields()
-		branch_suggestions = import_service.get_branch_mapping_suggestions(session['import_columns'])
-		template_vars = {
-			'filename': os.path.basename(session['import_file']),
-			'columns': session['import_columns'],
-			'sample_data': session['import_sample_data'],
-			'row_count': session['import_row_count'],
-			'auto_mapping': auto_mapping,
-			'system_fields': system_fields,
-			'branch_suggestions': branch_suggestions,
-			'file_type': session.get('import_type'),
+		auto_mapping = import_service.get_auto_mapping(columns)
+	except Exception:
+		auto_mapping = {}
+	try:
+		branch_suggestions = import_service.get_branch_mapping_suggestions(columns)
+	except Exception:
+		branch_suggestions = {
+			'existing_branches': [],
+			'branch_name_column': None,
+			'branch_code_column': None
 		}
-		if session.get('import_type') == 'excel':
-			template_vars['selected_sheet'] = session.get('selected_sheet')
-			template_vars['excel_info'] = session.get('excel_info')
-		return render_template('import/mapping.html', **template_vars)
-	except Exception as e:
-		flash(f'マッピング画面の表示中にエラーが発生しました: {str(e)}', 'error')
-		return redirect(url_for('import.index'))
+
+	template_vars = {
+		'filename': os.path.basename(session.get('import_file', '')),
+		'columns': columns,
+		'sample_data': session.get('import_sample_data', []),
+		'row_count': session.get('import_row_count', 0),
+		'auto_mapping': auto_mapping,
+		'system_fields': system_fields,
+		'branch_suggestions': branch_suggestions,
+		'file_type': session.get('import_type'),
+	}
+	if session.get('import_type') == 'excel':
+		template_vars['selected_sheet'] = session.get('selected_sheet')
+		template_vars['excel_info'] = session.get('excel_info')
+		if missing_sheet:
+			flash('シートが未選択です。必要に応じてシートを選択してください。', 'warning')
+
+	return render_template('import/mapping.html', **template_vars)
 
 
 @import_bp.route('/set_mapping', methods=['POST'])

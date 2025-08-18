@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request
+from sqlalchemy import inspect as sa_inspect
 from flask_sqlalchemy import SQLAlchemy
 from config import config
 
@@ -46,8 +47,29 @@ def create_app(config_name=None):
                 response.mimetype = 'application/javascript'
         return response
     
+    # リクエスト毎に最低限のDB初期化を保証（初回起動時の500回避）
+    @app.before_request
+    def ensure_db_initialized():
+        try:
+            inspector = sa_inspect(db.engine)
+            tables = set(inspector.get_table_names())
+            required = {"projects", "branches", "fiscal_years"}
+            if not required.issubset(tables):
+                # モデル読み込み後に作成
+                from app import models  # noqa: F401
+                db.create_all()
+        except Exception:
+            # 初期化段階の例外は握りつぶしてハンドラ（OperationalError フォールバック）に委ねる
+            pass
+
     # Create database tables
     with app.app_context():
+        # Ensure models are imported so SQLAlchemy is aware of all tables
+        try:
+            from app import models  # noqa: F401
+        except Exception:
+            # 遅延インポート失敗時でもアプリの起動は継続する
+            pass
         db.create_all()
     
     return app

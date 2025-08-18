@@ -8,7 +8,8 @@ class Config:
     # Database configuration
     BASE_DIR = Path(__file__).parent
     DATABASE_PATH = BASE_DIR / 'data' / 'projects.db'
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+    # Windows でも安定して解決できるように、URI は POSIX 形式にする
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DATABASE_PATH.as_posix()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # File upload configuration
@@ -57,7 +58,9 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    # テスト専用のファイルベースDBを使用して、接続の跨りで状態を保持しつつ本番DBを保護
+    TEST_DATABASE_PATH = Config.BASE_DIR / 'data' / 'test_sample.db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + TEST_DATABASE_PATH.as_posix()
     WTF_CSRF_ENABLED = False
 
 # Configuration mapping

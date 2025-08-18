@@ -6,15 +6,20 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)](https://flask.palletsprojects.com/)
 
-## 概要
-プロジェクトの売上、経費、粗利を管理するFlaskベースのWebアプリケーションです。
+
+FLASK_ENV=testing python -m pytest tests/ -v
+
+# Linux/Mac環境（makeが使える場合）
+make test
 支社管理機能とプロジェクト管理機能を備えた本格的な業務システムです。
 
 ## 主な機能
 - 📊 **ダッシュボード**: プロジェクト統計とグラフ表示、支社別統計の年度選択機能
-- 🏢 **支社管理**: 支社の登録・編集・削除・有効/無効切り替え
+テストでは**テスト専用のデータベース（data/test_sample.db）**を使用し、本番DB（data/projects.db）に影響を与えません。
 - 📅 **年度管理**: 年度マスターの登録・編集・削除・有効/無効切り替え
-- 📋 **プロジェクト管理**: プロジェクトの登録・編集・削除・一覧表示
+メモ:
+- 直接pytestを叩く場合は必ず `FLASK_ENV=testing` を付与してください。
+- Makefileの`make test`/`make test-coverage`は自動で`FLASK_ENV=testing`を設定します。
 - 🔍 **高度な検索・絞り込み**: 年度・支社による絞り込み、DataTablesによる高速検索・ソート・ページング
 - 📱 **レスポンシブデザイン**: AdminLTEベースのモダンなUI
 - ✅ **データ検証**: 包括的なバリデーション機能
@@ -173,16 +178,16 @@ python app.py
 
 ### 全テスト実行
 ```bash
-# Windows環境（PowerShell）
-python -m pytest tests/ -v
+# Windows（PowerShell）
+$env:FLASK_ENV='testing'; python -m pytest tests/ -v
 
-# Linux/Mac環境（makeが使える場合）
+# Linux/Mac（makeが使える場合）
 make test
 ```
 
 ### テストカテゴリ別実行
 ```bash
-# 単体テスト（テスト専用データベース使用）
+# 単体テスト
 python -m pytest tests/unit/ -v
 
 # 統合テスト
@@ -196,7 +201,7 @@ python -m pytest tests/integration/test_branch_*.py -v  # 支社機能
 python -m pytest tests/integration/test_project_*.py -v # プロジェクト機能
 python -m pytest tests/unit/dashboard/ -v              # ダッシュボード機能
 
-# クリーンなテスト（推奨）
+# クリーンなテスト（例）
 python -m pytest tests/unit/test_validation_clean.py -v
 ```
 
@@ -206,19 +211,23 @@ python -m pytest tests/integration/test_branch_functionality.py -v
 python -m pytest tests/integration/test_project_creation.py -v
 python -m pytest tests/integration/test_task9_branch_selection.py -v
 
-# 新しいクリーンなテスト（推奨）
+# クリーンなテスト（例）
 python -m pytest tests/unit/test_validation_clean.py -v
 ```
 
 ## テスト環境
 
 ### テスト専用データベース
-単体テストでは**テスト専用の一時データベース**を使用し、実データに影響を与えません：
+テストでは**テスト専用のデータベース（data/test_sample.db）**を使用し、本番DB（data/projects.db）に影響を与えません。
 
 - **独立性**: 各テストが完全に独立して実行
 - **安全性**: 実データベースに影響なし
 - **並列実行**: 複数テストの同時実行が可能
 - **再現性**: いつでも同じ結果が得られる
+
+メモ:
+- 直接pytestを叩く場合は必ず `FLASK_ENV=testing` を付与してください。
+- Makefileの`make test`/`make test-coverage`は自動で`FLASK_ENV=testing`を設定します。
 
 ### フィクスチャ（テストデータ）
 `tests/conftest.py`でテスト用データを自動生成：

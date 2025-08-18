@@ -413,7 +413,8 @@
 <script>
   $(document).ready(function () {
 
-    var revenueChart, profitChart, comparisonChart, probabilityChart, monthlyChart;
+  var revenueChart, profitChart, comparisonChart, probabilityChart, monthlyChart;
+  var probLoadInFlight = false;
 
     // チャートオプション（Chart.js v2対応）
     var chartOptions = {
@@ -569,8 +570,11 @@
         });
     }
 
-    // 受注角度分布チャートを読み込み
+    // 受注角度分布チャートを読み込み（デバウンス＋インプレース更新）
     function loadProbabilityChart(year) {
+      if (probLoadInFlight) return;
+      probLoadInFlight = true;
+
       var url = '/api/order-probability-distribution';
       if (year) {
         url += '?year=' + year;
@@ -578,20 +582,22 @@
 
       $.get(url)
         .done(function (data) {
-          var distribution = data.distribution;
+          var distribution = data.distribution || {};
           var labels = [];
           var counts = [];
           var revenues = [];
           var colors = ['#dc3545', '#ffc107', '#28a745']; // 赤、黄、緑
 
-          Object.keys(distribution).forEach(function(key, index) {
+          Object.keys(distribution).forEach(function(key) {
             labels.push(key);
-            counts.push(distribution[key].count);
-            revenues.push(distribution[key].total_revenue);
+            counts.push(distribution[key].count || 0);
+            revenues.push(distribution[key].total_revenue || 0);
           });
 
+          var $canvas = $('#probability-chart');
           if (labels.length === 0) {
-            $('#probability-chart').parent().html('<div class="alert alert-info">データがありません</div>');
+            $canvas.parent().html('<div class="alert alert-info">データがありません</div>');
+            $('#probability-legend').empty();
             return;
           }
 
@@ -600,42 +606,61 @@
             datasets: [{
               data: counts,
               backgroundColor: colors.slice(0, labels.length),
-              borderColor: colors.slice(0, labels.length),
+              borderColor: '#ffffff',
               borderWidth: 1
             }]
           };
 
-          var probabilityChartCanvas = $('#probability-chart').get(0).getContext('2d');
-          if (probabilityChart) {
-            probabilityChart.destroy();
-          }
-          probabilityChart = new Chart(probabilityChartCanvas, {
-            type: 'doughnut',
-            data: probabilityChartData,
-            options: {
-              maintainAspectRatio: false,
-              responsive: true,
-              legend: {
-                display: false
+          var probabilityOptions = {
+            maintainAspectRatio: false,
+            responsive: false,
+            animation: { duration: 0 },
+            legend: { display: false },
+            cutoutPercentage: 60,
+            tooltips: {
+              callbacks: {
+                label: function(tooltipItem, chartData) {
+                  var idx = tooltipItem.index;
+                  var lbl = chartData.labels[idx];
+                  var cnt = counts[idx] || 0;
+                  var rev = revenues[idx] || 0;
+                  return lbl + ': ' + cnt + '件 / ¥' + Number(rev).toLocaleString();
+                }
               }
             }
-          });
+          };
+
+          var ctx = $canvas.get(0).getContext('2d');
+          if (probabilityChart) {
+            probabilityChart.data.labels = probabilityChartData.labels;
+            probabilityChart.data.datasets[0].data = probabilityChartData.datasets[0].data;
+            probabilityChart.data.datasets[0].backgroundColor = probabilityChartData.datasets[0].backgroundColor;
+            probabilityChart.update(0);
+          } else {
+            probabilityChart = new Chart(ctx, {
+              type: 'doughnut',
+              data: probabilityChartData,
+              options: probabilityOptions
+            });
+          }
 
           // 凡例を手動で作成
           var legendHtml = '';
           labels.forEach(function(label, index) {
-            var count = counts[index];
-            var revenue = revenues[index];
+            var count = counts[index] || 0;
+            var revenue = revenues[index] || 0;
             legendHtml += '<div class="d-flex justify-content-between align-items-center mb-1">';
             legendHtml += '<span><i class="fas fa-circle" style="color: ' + colors[index] + ';"></i> ' + label + '</span>';
-            legendHtml += '<span class="badge badge-secondary">' + count + '件 / ¥' + revenue.toLocaleString() + '</span>';
+            legendHtml += '<span class="badge badge-secondary">' + count + '件 / ¥' + Number(revenue).toLocaleString() + '</span>';
             legendHtml += '</div>';
           });
           $('#probability-legend').html(legendHtml);
-
         })
         .fail(function (xhr, status, error) {
           console.error('受注角度分布データの取得に失敗しました:', error);
+        })
+        .always(function () {
+          probLoadInFlight = false;
         });
     }
 
@@ -731,46 +756,46 @@
 
     // フィルタオプションを読み込み
     function loadFilterOptions() {
+      var yearSelect = $('#monthly-year-select');
+      var branchSelect = $('#branch-filter');
+      var probSelect = $('#probability-filter');
+
       $.get('/api/filter-options')
         .done(function(data) {
-          filterOptions = data;
-          
-          // 年度選択を更新
-          var yearSelect = $('#monthly-year-select');
-          yearSelect.empty().append('<option value="">選択してください</option>');
-          data.years.forEach(function(year) {
-            yearSelect.append('<option value="' + year + '">' + year + '年度</option>');
+          filterOptions = data || {};
+
+          // 年度
+          yearSelect.empty();
+          (data.years || []).forEach(function(y) {
+            yearSelect.append('<option value="' + y + '">' + y + '</option>');
           });
-          
-          // 支社選択を更新
-          var branchSelect = $('#branch-filter');
+
+          // 支社
           branchSelect.empty();
-          data.branches.forEach(function(branch) {
-            branchSelect.append('<option value="' + branch.id + '">' + branch.name + '</option>');
+          (data.branches || []).forEach(function(b) {
+            branchSelect.append('<option value="' + b.id + '">' + b.name + '</option>');
           });
-          
-          // 受注角度選択を更新
-          var probSelect = $('#probability-filter');
+
+          // 受注角度
           probSelect.empty();
-          data.order_probabilities.forEach(function(prob) {
-            probSelect.append('<option value="' + prob.value + '">' + prob.label + '</option>');
+          (data.order_probabilities || []).forEach(function(p) {
+            probSelect.append('<option value="' + p.value + '">' + p.label + '</option>');
           });
-          
-          // Select2を初期化
+
+          // Select2 初期化
           $('#branch-filter').select2({
             theme: 'bootstrap4',
             placeholder: '支社を選択（複数選択可）',
             allowClear: true
           });
-          
           $('#probability-filter').select2({
             theme: 'bootstrap4',
             placeholder: '受注角度を選択（複数選択可）',
             allowClear: true
           });
-          
-          // デフォルト年度を設定
-          if (data.years.length > 0) {
+
+          // デフォルト年度で月次チャートを読み込み
+          if ((data.years || []).length > 0) {
             yearSelect.val(data.years[0]);
             loadMonthlyChart();
           }
@@ -958,6 +983,25 @@
     
     $('input[name="chart-type"], input[name="data-type"]').on('change', function() {
       updateMonthlyChart();
+    });
+
+    // カードの開閉に合わせてチャートを管理（AdminLTEのイベント）
+    var $probCard = $('#probability-chart').closest('.card');
+    $probCard.on('collapsed.lte.card', function() {
+      if (probabilityChart) {
+        probabilityChart.destroy();
+        probabilityChart = null;
+        $('#probability-legend').empty();
+      }
+    });
+    $probCard.on('expanded.lte.card', function() {
+      // 表示時に必要なら再描画
+      loadProbabilityChart($('#branch-stats-year-select').val() || null);
+    });
+
+    // ページ離脱時にクリーンアップ
+    $(window).on('unload', function() {
+      try { if (probabilityChart) { probabilityChart.destroy(); probabilityChart = null; } } catch (e) {}
     });
 
     // 初期データを読み込み
