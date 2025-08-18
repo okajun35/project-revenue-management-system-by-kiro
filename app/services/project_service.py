@@ -3,12 +3,14 @@ from app.services.validation_service import ValidationService
 from app import db
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import logging
+from app.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectService:
     """プロジェクト管理のビジネスロジック"""
+    _svc = BaseService[Project](Project)
     
     @staticmethod
     def create_project(data):
@@ -107,7 +109,7 @@ class ProjectService:
     def get_project(project_id):
         """プロジェクトを取得"""
         try:
-            project = Project.query.get(project_id)
+            project = ProjectService._svc.get(project_id)
             if not project:
                 return ValidationService.create_error_response(
                     'PROJECT_NOT_FOUND',

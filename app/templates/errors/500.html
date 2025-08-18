@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}内部サーバーエラー{% endblock %}
+{% block page_title %}内部サーバーエラー{% endblock %}
+{% block content %}
+<div class="alert alert-danger">
+  <h4 class="alert-heading">500 - Internal Server Error</h4>
+  <p>予期しないエラーが発生しました。しばらくしてから再度お試しください。</p>
+  <hr>
+  <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">ホームへ戻る</a>
+</div>
+{% endblock %}

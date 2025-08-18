@@ -1,3 +1,10 @@
+"""
+Pytest 共通設定: すべてのテストでテスト用DB(TestingConfig)を使うよう強制します。
+"""
+import os
+
+# 可能な限り早期に testing 設定へ切り替え
+os.environ.setdefault("FLASK_ENV", "testing")
 #!/usr/bin/env python3
 """
 pytest設定とフィクスチャ

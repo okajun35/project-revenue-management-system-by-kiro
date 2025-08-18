@@ -66,31 +66,31 @@ class TestExcelImport:
     def test_excel_file_validation_success(self, app):
         """正常なExcelファイルの検証テスト"""
         with app.app_context():
-        # テストデータ
-        test_data = [{
-            'プロジェクトコード': 'EXCEL001',
-            'プロジェクト名': 'Excelテストプロジェクト',
-            '支社名': 'テスト支社',
-            '売上の年度': 2024,
-            '受注角度': '〇',
-            '売上': 1000000,
-            '経費': 800000
-        }]
-        
-        filepath = self.create_test_excel_file([test_data])
-        
-        try:
-            result = self.import_service.validate_file(filepath, 'excel')
+            # テストデータ
+            test_data = [{
+                'プロジェクトコード': 'EXCEL001',
+                'プロジェクト名': 'Excelテストプロジェクト',
+                '支社名': 'テスト支社',
+                '売上の年度': 2024,
+                '受注角度': '〇',
+                '売上': 1000000,
+                '経費': 800000
+            }]
             
-            assert result['success'] is True
-            assert result['row_count'] == 1
-            assert 'project_code' in result['columns']
-            assert 'excel_info' in result
-            assert result['excel_info']['success'] is True
-            assert len(result['excel_info']['sheets']) == 1
+            filepath = self.create_test_excel_file([test_data])
             
-        finally:
-            os.unlink(filepath)
+            try:
+                result = self.import_service.validate_file(filepath, 'excel')
+                
+                assert result['success'] is True
+                assert result['row_count'] == 1
+                assert 'project_code' in result['columns']
+                assert 'excel_info' in result
+                assert result['excel_info']['success'] is True
+                assert len(result['excel_info']['sheets']) == 1
+                
+            finally:
+                os.unlink(filepath)
     
     def test_excel_file_validation_multiple_sheets(self):
         """複数シートを持つExcelファイルの検証テスト"""

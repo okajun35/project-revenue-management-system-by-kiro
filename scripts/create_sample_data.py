@@ -7,9 +7,10 @@ import sys
 from pathlib import Path
 from datetime import datetime, date
 
-# プロジェクトルートをパスに追加
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+# プロジェクトルートをパスに追加（scripts の親ディレクトリ）
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from app import create_app, db
 from app.models import Branch, FiscalYear, Project
@@ -235,7 +236,7 @@ if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='Manage sample data for production environment')
-    parser.add_argument('action', choices=['create', 'clear'], help='Action to perform')
+    parser.add_argument('action', nargs='?', choices=['create', 'clear'], default='create', help='Action to perform')
     
     args = parser.parse_args()
     

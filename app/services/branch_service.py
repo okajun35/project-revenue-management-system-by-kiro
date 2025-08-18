@@ -4,10 +4,13 @@
 from typing import List, Optional, Dict, Any
 from app.models import Branch, ValidationError
 from app import db
+from app.services.base_service import BaseService
 
 
 class BranchService:
     """支社管理サービス"""
+    # 共通CRUDヘルパー（必要箇所で使用）
+    _svc = BaseService[Branch](Branch)
     
     @staticmethod
     def get_all_branches(include_inactive: bool = True) -> List[Branch]:
@@ -25,7 +28,7 @@ class BranchService:
     @staticmethod
     def get_branch_by_id(branch_id: int) -> Optional[Branch]:
         """IDで支社を取得"""
-        return Branch.query.get(branch_id)
+        return BranchService._svc.get(branch_id)
     
     @staticmethod
     def get_branch_by_code(branch_code: str) -> Optional[Branch]:

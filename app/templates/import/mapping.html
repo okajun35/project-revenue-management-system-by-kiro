@@ -240,7 +240,7 @@
                                     <i class="fas fa-magic"></i>
                                     自動マッピング改善
                                 </button>
-                                <a href="{{ url_for('import.cancel') }}" class="btn btn-secondary">
+                                <a href="{{ url_for('import.cancel_import') }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i>
                                     キャンセル
                                 </a>
@@ -253,10 +253,18 @@
     </section>
 </div>
 
-<script>
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/import_mapping.js') }}"></script>
+<script type="application/javascript">
 $(document).ready(function() {
-    var sampleData = {{ sample_data | tojson }};
+    var sampleData = JSON.parse('{{ sample_data | tojson | safe }}');
+    var allColumns = JSON.parse('{{ columns | tojson | safe }}');
     var validationTimeout;
+
+    // 初期表示時に未設定項目へサジェストを適用（既存選択は維持）
+    if (window.applyMappingSuggestions) {
+        window.applyMappingSuggestions(allColumns);
+    }
     
     // 列選択時にサンプルデータを更新
     $('.column-select').on('change', function() {
@@ -358,7 +366,9 @@ $(document).ready(function() {
     
     // 自動マッピング改善ボタン
     $('#improve-mapping').on('click', function() {
-        // 未マッピングの必須フィールドに対して推測マッピングを実行
+    // 未マッピングの必須フィールドに対して推測マッピングを実行（サーバ側APIを利用）
+    window.applyMappingSuggestions(allColumns);
+    // 既存のクライアント側ヒューリスティクスもフォールバックとして残す
         var requiredFields = ['project_code', 'project_name', 'branch_name', 'fiscal_year', 'order_probability', 'revenue', 'expenses'];
         
         requiredFields.forEach(function(field) {
@@ -373,9 +383,9 @@ $(document).ready(function() {
         });
     });
     
-    // 列名の類似度マッチング
+    // 列名の類似度マッチング（フォールバック）
     function findBestColumnMatch(fieldName) {
-        var columns = {{ columns | tojson }};
+        var columns = JSON.parse('{{ columns | tojson | safe }}');
         var keywords = {
             'project_code': ['プロジェクト', 'コード', 'project', 'code', 'id'],
             'project_name': ['プロジェクト', '名', 'project', 'name', 'title'],
@@ -507,4 +517,5 @@ $(document).ready(function() {
     validateMapping();
 });
 </script>
+{% endblock %}
 {% endblock %}

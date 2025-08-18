@@ -148,7 +148,7 @@ def test_excel_export():
             
             # Test 4: Check export routes
             try:
-                from app.export_routes import export_bp
+                from app.routes.export import export_bp
                 print("✓ Export routes blueprint loaded successfully")
                 
                 # Check if Excel export route exists
