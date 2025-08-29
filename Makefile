@@ -53,12 +53,12 @@ prod:
 # テスト実行
 test:
 	@echo "🧪 テストを実行中..."
-	python -m pytest tests/ -v
+	FLASK_ENV=testing python -m pytest tests/ -v
 
 # テスト（カバレッジ付き）
 test-coverage:
 	@echo "🧪 テスト（カバレッジ付き）を実行中..."
-	python -m pytest tests/ --cov=app --cov-report=html --cov-report=term
+	FLASK_ENV=testing python -m pytest tests/ --cov=app --cov-report=html --cov-report=term
 
 # 基本サンプルデータ作成
 sample-data:

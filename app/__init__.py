@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request
+from sqlalchemy import inspect as sa_inspect
 from flask_sqlalchemy import SQLAlchemy
 from config import config
 
@@ -27,21 +28,13 @@ def create_app(config_name=None):
     # Initialize extensions with app
     db.init_app(app)
     
-    # Register blueprints
-    from app.routes import main_bp
-    from app.project_routes import project_bp
-    from app.branch_routes import branch_bp
-    from app.fiscal_year_routes import fiscal_year_bp
-    from app.export_routes import export_bp
-    from app.import_routes import import_bp
-    from app.backup_routes import backup_bp
-    app.register_blueprint(main_bp)
-    app.register_blueprint(project_bp)
-    app.register_blueprint(branch_bp)
-    app.register_blueprint(fiscal_year_bp)
-    app.register_blueprint(export_bp)
-    app.register_blueprint(import_bp)
-    app.register_blueprint(backup_bp)
+    # Register blueprints (centralized)
+    from app.controllers.blueprints import register_blueprints
+    register_blueprints(app)
+
+    # Register error handlers (centralized)
+    from app.controllers.error_handlers import register_error_handlers
+    register_error_handlers(app)
     
     # 静的ファイル配信の改善
     @app.after_request
@@ -54,8 +47,29 @@ def create_app(config_name=None):
                 response.mimetype = 'application/javascript'
         return response
     
+    # リクエスト毎に最低限のDB初期化を保証（初回起動時の500回避）
+    @app.before_request
+    def ensure_db_initialized():
+        try:
+            inspector = sa_inspect(db.engine)
+            tables = set(inspector.get_table_names())
+            required = {"projects", "branches", "fiscal_years"}
+            if not required.issubset(tables):
+                # モデル読み込み後に作成
+                from app import models  # noqa: F401
+                db.create_all()
+        except Exception:
+            # 初期化段階の例外は握りつぶしてハンドラ（OperationalError フォールバック）に委ねる
+            pass
+
     # Create database tables
     with app.app_context():
+        # Ensure models are imported so SQLAlchemy is aware of all tables
+        try:
+            from app import models  # noqa: F401
+        except Exception:
+            # 遅延インポート失敗時でもアプリの起動は継続する
+            pass
         db.create_all()
     
     return app

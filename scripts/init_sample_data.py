@@ -8,9 +8,10 @@ import sys
 import os
 from pathlib import Path
 
-# プロジェクトルートをパスに追加
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+# プロジェクトルートをパスに追加（scripts の親ディレクトリ）
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 def main():
     """メイン処理"""
@@ -67,6 +68,10 @@ def main():
     print("\n3. サンプルデータ作成中...")
     
     try:
+        # ルートを先頭に通しているため 'scripts.create_sample_data' が基本
+        from scripts.create_sample_data import create_sample_data
+    except ImportError:
+        # フォールバック（互換）
         from create_sample_data import create_sample_data
         success = create_sample_data()
         

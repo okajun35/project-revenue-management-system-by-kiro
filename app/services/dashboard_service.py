@@ -5,6 +5,7 @@
 """
 
 from sqlalchemy import func, desc
+from sqlalchemy.exc import OperationalError
 from app import db
 from app.models import Project, Branch
 
@@ -23,29 +24,29 @@ class DashboardService:
         Returns:
             dict: 統計情報
         """
-        query = Project.query
-        
-        if fiscal_year:
-            query = query.filter(Project.fiscal_year == fiscal_year)
-        
-        # 基本統計
-        total_projects = query.count()
-        
-        # 売上・経費・粗利の合計
-        totals = db.session.query(
-            func.sum(Project.revenue).label('total_revenue'),
-            func.sum(Project.expenses).label('total_expenses')
-        )
-        
-        if fiscal_year:
-            totals = totals.filter(Project.fiscal_year == fiscal_year)
-        
-        result = totals.first()
-        
-        total_revenue = float(result.total_revenue or 0)
-        total_expenses = float(result.total_expenses or 0)
-        total_gross_profit = total_revenue - total_expenses
-        
+        try:
+            query = Project.query
+            if fiscal_year:
+                query = query.filter(Project.fiscal_year == fiscal_year)
+            # 基本統計
+            total_projects = query.count()
+            # 売上・経費・粗利の合計
+            totals = db.session.query(
+                func.sum(Project.revenue).label('total_revenue'),
+                func.sum(Project.expenses).label('total_expenses')
+            )
+            if fiscal_year:
+                totals = totals.filter(Project.fiscal_year == fiscal_year)
+            result = totals.first()
+            total_revenue = float(result.total_revenue or 0)
+            total_expenses = float(result.total_expenses or 0)
+            total_gross_profit = total_revenue - total_expenses
+        except OperationalError:
+            # 初回起動などDB未初期化時のフォールバック
+            total_projects = 0
+            total_revenue = 0.0
+            total_expenses = 0.0
+            total_gross_profit = 0.0
         return {
             'total_projects': total_projects,
             'total_revenue': total_revenue,
@@ -62,12 +63,15 @@ class DashboardService:
         Returns:
             dict: 年度別データ（年度、売上、経費、粗利）
         """
-        yearly_data = db.session.query(
-            Project.fiscal_year,
-            func.sum(Project.revenue).label('total_revenue'),
-            func.sum(Project.expenses).label('total_expenses'),
-            func.count(Project.id).label('project_count')
-        ).group_by(Project.fiscal_year).order_by(Project.fiscal_year).all()
+        try:
+            yearly_data = db.session.query(
+                Project.fiscal_year,
+                func.sum(Project.revenue).label('total_revenue'),
+                func.sum(Project.expenses).label('total_expenses'),
+                func.count(Project.id).label('project_count')
+            ).group_by(Project.fiscal_year).order_by(Project.fiscal_year).all()
+        except OperationalError:
+            yearly_data = []
         
         years = []
         revenues = []
@@ -103,53 +107,53 @@ class DashboardService:
         Returns:
             list: 支社別統計情報のリスト
         """
-        if fiscal_year:
-            # 特定年度の場合：年度フィルターを適用したプロジェクトとの LEFT JOIN
-            query = db.session.query(
-                Branch.id,
-                Branch.branch_code,
-                Branch.branch_name,
-                func.count(Project.id).label('project_count'),
-                func.sum(Project.revenue).label('total_revenue'),
-                func.sum(Project.expenses).label('total_expenses')
-            ).outerjoin(
-                Project, 
-                db.and_(
-                    Branch.id == Project.branch_id,
-                    Project.fiscal_year == fiscal_year
+        try:
+            if fiscal_year:
+                # 特定年度の場合：年度フィルターを適用したプロジェクトとの LEFT JOIN
+                query = db.session.query(
+                    Branch.id,
+                    Branch.branch_code,
+                    Branch.branch_name,
+                    func.count(Project.id).label('project_count'),
+                    func.sum(Project.revenue).label('total_revenue'),
+                    func.sum(Project.expenses).label('total_expenses')
+                ).outerjoin(
+                    Project,
+                    db.and_(
+                        Branch.id == Project.branch_id,
+                        Project.fiscal_year == fiscal_year
+                    )
                 )
-            )
-        else:
-            # 全年度の場合：通常の LEFT JOIN
-            query = db.session.query(
-                Branch.id,
-                Branch.branch_code,
-                Branch.branch_name,
-                func.count(Project.id).label('project_count'),
-                func.sum(Project.revenue).label('total_revenue'),
-                func.sum(Project.expenses).label('total_expenses')
-            ).outerjoin(Project, Branch.id == Project.branch_id)
-        
-        query = query.filter(Branch.is_active == True).group_by(
-            Branch.id, Branch.branch_code, Branch.branch_name
-        ).order_by(Branch.branch_name)
-        
-        branch_stats = []
-        for data in query.all():
-            revenue = float(data.total_revenue or 0)
-            expenses = float(data.total_expenses or 0)
-            gross_profit = revenue - expenses
-            
-            branch_stats.append({
-                'branch_id': data.id,
-                'branch_code': data.branch_code,
-                'branch_name': data.branch_name,
-                'project_count': data.project_count,
-                'total_revenue': revenue,
-                'total_expenses': expenses,
-                'total_gross_profit': gross_profit,
-                'gross_profit_rate': (gross_profit / revenue * 100) if revenue > 0 else 0
-            })
+            else:
+                # 全年度の場合：通常の LEFT JOIN
+                query = db.session.query(
+                    Branch.id,
+                    Branch.branch_code,
+                    Branch.branch_name,
+                    func.count(Project.id).label('project_count'),
+                    func.sum(Project.revenue).label('total_revenue'),
+                    func.sum(Project.expenses).label('total_expenses')
+                ).outerjoin(Project, Branch.id == Project.branch_id)
+            query = query.filter(Branch.is_active == True).group_by(
+                Branch.id, Branch.branch_code, Branch.branch_name
+            ).order_by(Branch.branch_name)
+            branch_stats = []
+            for data in query.all():
+                revenue = float(data.total_revenue or 0)
+                expenses = float(data.total_expenses or 0)
+                gross_profit = revenue - expenses
+                branch_stats.append({
+                    'branch_id': data.id,
+                    'branch_code': data.branch_code,
+                    'branch_name': data.branch_name,
+                    'project_count': data.project_count,
+                    'total_revenue': revenue,
+                    'total_expenses': expenses,
+                    'total_gross_profit': gross_profit,
+                    'gross_profit_rate': (gross_profit / revenue * 100) if revenue > 0 else 0
+                })
+        except OperationalError:
+            branch_stats = []
         
         return branch_stats
     
@@ -164,11 +168,13 @@ class DashboardService:
         Returns:
             list: プロジェクトのリスト
         """
-        projects = Project.query.join(Branch).order_by(
-            desc(Project.updated_at)
-        ).limit(limit).all()
-        
-        return [project.to_dict() for project in projects]
+        try:
+            projects = Project.query.join(Branch).order_by(
+                desc(Project.updated_at)
+            ).limit(limit).all()
+            return [project.to_dict() for project in projects]
+        except OperationalError:
+            return []
     
     @staticmethod
     def get_available_years():
@@ -178,10 +184,12 @@ class DashboardService:
         Returns:
             list: 年度のリスト（降順）
         """
-        years = db.session.query(Project.fiscal_year).distinct().order_by(
-            desc(Project.fiscal_year)
-        ).all()
-        
+        try:
+            years = db.session.query(Project.fiscal_year).distinct().order_by(
+                desc(Project.fiscal_year)
+            ).all()
+        except OperationalError:
+            years = []
         return [year[0] for year in years] if years else []
     
     @staticmethod
